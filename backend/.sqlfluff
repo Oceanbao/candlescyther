@@ -1,0 +1,18 @@
+[sqlfluff]
+# Set the default dialect for the entire project
+# dialect = snowflake
+dialect = sqlite
+templater = jinja
+
+[sqlfluff:rules]
+# Exclude specific rules from being checked
+exclude_rules = L003, L014
+
+[sqlfluff:indentation]
+# Force all indentation to use 4 spaces
+indent_unit = space
+tab_space_size = 4
+
+[sqlfluff:rules:capitalisation.keywords]
+# Force all SQL keywords to be UPPERCASE
+capitalisation_policy = upper
