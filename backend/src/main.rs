@@ -1,9 +1,13 @@
+use backend::{
+    app::{AppState, User},
+    logging::{ServerLog, save_log},
+};
 use serde_json::{Value, json};
-use std::env;
+use std::{env, time::Duration};
 use tracing::info;
 
 use axum::{Json, Router, extract::State, routing::get};
-use sqlx::SqlitePool;
+use sqlx::sqlite::{self, SqlitePoolOptions};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -14,7 +18,12 @@ async fn main() -> anyhow::Result<()> {
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
 
     // Initialize database
-    let pool = SqlitePool::connect(&database_url).await?;
+    let pool = SqlitePoolOptions::new()
+        .max_connections(5)
+        .acquire_timeout(Duration::from_secs(3))
+        .connect(&database_url)
+        .await?;
+
     sqlx::migrate!("./migrations").run(&pool).await?;
 
     if let Err(e) = sqlx::query("INSERT INTO user (user_name, user_role) VALUES (?, ?)")
@@ -31,6 +40,7 @@ async fn main() -> anyhow::Result<()> {
     // Build our application with a single route
     let app = Router::new()
         .route("/check", get(check_handler))
+        .route("/logs", get(log_handler))
         .with_state(AppState { db: pool });
 
     // Start the cron job in a separate task
@@ -49,22 +59,42 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-#[derive(Clone)]
-struct AppState {
-    pub db: SqlitePool,
-}
-
 // Handler for the /check endpoint
 async fn check_handler(State(state): State<AppState>) -> Json<Value> {
-    match sqlx::query("SELECT 1").execute(&state.db).await {
-        Ok(result) => {
-            let res = format!("{result:#?}");
+    save_log(&state).await;
+
+    match sqlx::query_as::<sqlite::Sqlite, User>("SELECT * FROM user")
+        .fetch_all(&state.db)
+        .await
+    {
+        Ok(users) => Json(json!({
+            "status": "ok",
+            "database": "connected",
+            "data": users,
+        })),
+        Err(e) => {
+            tracing::error!("Database error: {}", e);
             Json(json!({
-                "status": "ok",
-                "database": "connected",
-                "data": res,
+                "status": "error",
+                "database": "disconnected",
+                "error": e.to_string()
             }))
         }
+    }
+}
+
+async fn log_handler(State(state): State<AppState>) -> Json<Value> {
+    save_log(&state).await;
+
+    match sqlx::query_as!(ServerLog, "SELECT * FROM logging LIMIT 10")
+        .fetch_all(&state.db)
+        .await
+    {
+        Ok(logs) => Json(json!({
+            "status": "ok",
+            "database": "connected",
+            "data": logs,
+        })),
         Err(e) => {
             tracing::error!("Database error: {}", e);
             Json(json!({

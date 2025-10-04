@@ -32,9 +32,9 @@ Reap long candles.
 ```sh
 v0.1.0
 Back
-- setup web server with infra
-- create simple log db, migration
-- git up, deploy to fly
+- [x] setup web server with infra
+- [ ] create simple log db, migration
+- [ ] git up, deploy to fly
 Front
 - shell page, maybe a template from somewhere
 - deploy to CF page
