@@ -3,7 +3,7 @@ use backend::{
     logging::{LogEntry, LogLevel, logit},
 };
 use serde_json::{Value, json};
-use std::{env, time::Duration};
+use std::time::Duration;
 use tracing::info;
 
 use axum::{Json, Router, extract::State, routing::get};
@@ -15,13 +15,14 @@ async fn main() -> anyhow::Result<()> {
 
     tracing_subscriber::fmt::init();
 
-    let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    // let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    let database_url = "sqlite:./db/database.db?mode=rwc";
 
     // Initialize database
     let pool = SqlitePoolOptions::new()
         .max_connections(5)
         .acquire_timeout(Duration::from_secs(3))
-        .connect(&database_url)
+        .connect(database_url)
         .await?;
 
     sqlx::migrate!("./migrations").run(&pool).await?;

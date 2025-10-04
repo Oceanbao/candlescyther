@@ -1,0 +1,18 @@
+# Ignore local Rust build and test artifacts
+target/
+
+# Ignore development/version control files
+.git
+.gitignore
+.cargo
+
+# Ignore IDE/editor files and caches
+.idea/
+.vscode/
+*.swp
+*~
+.#*
+
+# Ignore temporary/OS files
+.DS_Store
+Thumbs.db

@@ -24,3 +24,5 @@ frontend/vite.config.ts.timestamp-*
 
 # Backend
 backend/target/
+backend/.cargo/registry/
+backend/.cargo/git/

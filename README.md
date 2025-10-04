@@ -33,7 +33,7 @@ Reap long candles.
 v0.1.0
 Back
 - [x] setup web server with infra
-- [ ] create simple log db, migration
+- [x] create simple log db, migration
 - [ ] git up, deploy to fly
 Front
 - shell page, maybe a template from somewhere
