@@ -1,6 +1,6 @@
 use backend::{
     app::{AppState, User},
-    logging::{ServerLog, save_log},
+    logging::{LogEntry, LogLevel, logit},
 };
 use serde_json::{Value, json};
 use std::{env, time::Duration};
@@ -61,7 +61,11 @@ async fn main() -> anyhow::Result<()> {
 
 // Handler for the /check endpoint
 async fn check_handler(State(state): State<AppState>) -> Json<Value> {
-    save_log(&state).await;
+    logit(
+        &state,
+        LogEntry::new(LogLevel::Debug, "pre-select", "check_handler", 64),
+    )
+    .await;
 
     match sqlx::query_as::<sqlite::Sqlite, User>("SELECT * FROM user")
         .fetch_all(&state.db)
@@ -84,9 +88,13 @@ async fn check_handler(State(state): State<AppState>) -> Json<Value> {
 }
 
 async fn log_handler(State(state): State<AppState>) -> Json<Value> {
-    save_log(&state).await;
+    logit(
+        &state,
+        LogEntry::new(LogLevel::Debug, "pre-select", "log_handler", 93),
+    )
+    .await;
 
-    match sqlx::query_as!(ServerLog, "SELECT * FROM logging LIMIT 10")
+    match sqlx::query_as!(LogEntry, "SELECT * FROM logging LIMIT 10")
         .fetch_all(&state.db)
         .await
     {

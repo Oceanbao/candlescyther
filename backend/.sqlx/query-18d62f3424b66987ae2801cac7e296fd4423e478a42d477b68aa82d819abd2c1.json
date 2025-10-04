@@ -16,18 +16,30 @@
       {
         "name": "log_level",
         "ordinal": 2,
-        "type_info": "Text"
+        "type_info": "Integer"
       },
       {
         "name": "log_target",
         "ordinal": 3,
         "type_info": "Text"
+      },
+      {
+        "name": "log_message",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "log_line",
+        "ordinal": 5,
+        "type_info": "Integer"
       }
     ],
     "parameters": {
       "Right": 0
     },
     "nullable": [
+      false,
+      false,
       false,
       false,
       false,
