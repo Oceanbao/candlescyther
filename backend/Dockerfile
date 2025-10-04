@@ -1,6 +1,3 @@
-ARG APP=backend
-ARG PORT=8080
-
 FROM rust:1.90.0 AS chef
 
 RUN cargo install sccache --version ^0.10
@@ -28,7 +25,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
   --mount=type=cache,target=$SCCACHE_DIR,sharing=locked \
   --mount=type=cache,target=/app/target \
   cargo build --release && \
-  mv ./target/release/"${APP}" ./server
+  mv ./target/release/backend server
 
 # Runtime image
 FROM gcr.io/distroless/cc-debian12
@@ -42,9 +39,10 @@ FROM gcr.io/distroless/cc-debian12
 WORKDIR /app
 
 # Get compiled binaries from builder's cargo install directory
-COPY --from=builder /app/server .
+COPY --from=builder /app/server server
+COPY --from=builder /app/migrations migrations
 
-EXPOSE ${PORT}
+EXPOSE 8080
 
 # Run the app
 CMD ["./server"]

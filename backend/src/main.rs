@@ -3,11 +3,14 @@ use backend::{
     logging::{LogEntry, LogLevel, logit},
 };
 use serde_json::{Value, json};
-use std::time::Duration;
+use std::{env, time::Duration};
 use tracing::info;
 
 use axum::{Json, Router, extract::State, routing::get};
-use sqlx::sqlite::{self, SqlitePoolOptions};
+use sqlx::{
+    migrate::MigrateDatabase,
+    sqlite::{self, SqlitePoolOptions},
+};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -16,7 +19,27 @@ async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt::init();
 
     // let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-    let database_url = "sqlite:./db/database.db?mode=rwc";
+    // if !std::path::Path::new("db").exists() {
+    //     fs::create_dir("db")?;
+    // }
+    // let path_buf = env::current_dir()?;
+    // info!("CWD --------------------------- : {}", path_buf.display());
+
+    let database_url = "sqlite:///db/database.db?mode=rwc";
+
+    match sqlx::Sqlite::database_exists(database_url).await {
+        Ok(exist) => {
+            if !exist {
+                match sqlx::Sqlite::create_database(database_url).await {
+                    Ok(_) => info!("Database created."),
+                    Err(e) => info!("Database creation failed: {}", e),
+                }
+            } else {
+                info!("Database exist!");
+            }
+        }
+        Err(e) => info!("Database checking failed: {}", e),
+    }
 
     // Initialize database
     let pool = SqlitePoolOptions::new()
