@@ -34,10 +34,10 @@ v0.1.0
 Back
 - [x] setup web server with infra
 - [x] create simple log db, migration
-- [ ] git up, deploy to fly
+- [x] git up, deploy to fly
 Front
-- shell page, maybe a template from somewhere
-- deploy to CF page
+- [ ] shell page, maybe a template from somewhere
+- [ ] deploy to CF page
 ```
 
 - design schema
