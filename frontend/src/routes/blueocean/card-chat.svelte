@@ -14,27 +14,27 @@
 		{
 			name: 'Olivia Martin',
 			email: 'm@example.com',
-			avatar: '/avatars/01.png'
+			avatar: '.'
 		},
 		{
 			name: 'Isabella Nguyen',
 			email: 'isabella.nguyen@email.com',
-			avatar: '/avatars/03.png'
+			avatar: '.'
 		},
 		{
 			name: 'Emma Wilson',
 			email: 'emma@example.com',
-			avatar: '/avatars/05.png'
+			avatar: '.'
 		},
 		{
 			name: 'Jackson Lee',
 			email: 'lee@example.com',
-			avatar: '/avatars/02.png'
+			avatar: '.'
 		},
 		{
 			name: 'William Kim',
 			email: 'will@email.com',
-			avatar: '/avatars/04.png'
+			avatar: '.'
 		}
 	] as const;
 
@@ -69,7 +69,7 @@
 	<Card.Header class="flex flex-row items-center">
 		<div class="flex items-center gap-4">
 			<Avatar class="border">
-				<AvatarImage src="/avatars/01.png" alt="Image" />
+				<AvatarImage src="." alt="Image" />
 				<AvatarFallback>S</AvatarFallback>
 			</Avatar>
 			<div class="flex flex-col gap-0.5">

@@ -11,22 +11,22 @@
 		{
 			name: 'Olivia Martin',
 			email: 'm@example.com',
-			avatar: '/avatars/03.png'
+			avatar: '.'
 		},
 		{
 			name: 'Isabella Nguyen',
 			email: 'b@example.com',
-			avatar: '/avatars/04.png'
+			avatar: '.'
 		},
 		{
 			name: 'Sofia Davis',
 			email: 'p@example.com',
-			avatar: '/avatars/05.png'
+			avatar: '.'
 		},
 		{
 			name: 'Ethan Thompson',
 			email: 'e@example.com',
-			avatar: '/avatars/01.png'
+			avatar: '.'
 		}
 	];
 

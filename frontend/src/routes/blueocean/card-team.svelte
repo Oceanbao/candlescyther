@@ -16,19 +16,19 @@
 		{
 			name: 'Sofia Davis',
 			email: 'm@example.com',
-			avatar: '/avatars/01.png',
+			avatar: '',
 			role: 'Owner'
 		},
 		{
 			name: 'Jackson Lee',
 			email: 'p@example.com',
-			avatar: '/avatars/02.png',
+			avatar: '',
 			role: 'Developer'
 		},
 		{
 			name: 'Isabella Nguyen',
 			email: 'i@example.com',
-			avatar: '/avatars/03.png',
+			avatar: '',
 			role: 'Billing'
 		}
 	];
