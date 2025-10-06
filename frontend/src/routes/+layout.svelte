@@ -7,6 +7,13 @@
 
 <svelte:head>
 	<link rel="icon" href={favicon} />
+	<link
+		rel="preload"
+		as="font"
+		type="font/woff2"
+		href="/fonts/GeistMono.woff2"
+		crossorigin="anonymous"
+	/>
 </svelte:head>
 
 {@render children?.()}
