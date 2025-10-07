@@ -1,16 +1,12 @@
 use backend::{
-    app::{AppState, User},
-    logging::{LogEntry, LogLevel, logit},
+    app::AppState,
+    handlers::{check_handler, log_handler},
 };
-use serde_json::{Value, json};
-use std::{env, time::Duration};
+use std::time::Duration;
 use tracing::info;
 
-use axum::{Json, Router, extract::State, routing::get};
-use sqlx::{
-    migrate::MigrateDatabase,
-    sqlite::{self, SqlitePoolOptions},
-};
+use axum::{Router, routing::get};
+use sqlx::{migrate::MigrateDatabase, sqlite::SqlitePoolOptions};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -35,7 +31,7 @@ async fn main() -> anyhow::Result<()> {
                     Err(e) => info!("Database creation failed: {}", e),
                 }
             } else {
-                info!("Database exist!");
+                info!("Database exists!");
             }
         }
         Err(e) => info!("Database checking failed: {}", e),
@@ -81,59 +77,4 @@ async fn main() -> anyhow::Result<()> {
     axum::serve(listener, app).await?;
 
     Ok(())
-}
-
-// Handler for the /check endpoint
-async fn check_handler(State(state): State<AppState>) -> Json<Value> {
-    logit(
-        &state,
-        LogEntry::new(LogLevel::Debug, "pre-select", "check_handler", 64),
-    )
-    .await;
-
-    match sqlx::query_as::<sqlite::Sqlite, User>("SELECT * FROM user")
-        .fetch_all(&state.db)
-        .await
-    {
-        Ok(users) => Json(json!({
-            "status": "ok",
-            "database": "connected",
-            "data": users,
-        })),
-        Err(e) => {
-            tracing::error!("Database error: {}", e);
-            Json(json!({
-                "status": "error",
-                "database": "disconnected",
-                "error": e.to_string()
-            }))
-        }
-    }
-}
-
-async fn log_handler(State(state): State<AppState>) -> Json<Value> {
-    logit(
-        &state,
-        LogEntry::new(LogLevel::Debug, "pre-select", "log_handler", 93),
-    )
-    .await;
-
-    match sqlx::query_as!(LogEntry, "SELECT * FROM logging LIMIT 10")
-        .fetch_all(&state.db)
-        .await
-    {
-        Ok(logs) => Json(json!({
-            "status": "ok",
-            "database": "connected",
-            "data": logs,
-        })),
-        Err(e) => {
-            tracing::error!("Database error: {}", e);
-            Json(json!({
-                "status": "error",
-                "database": "disconnected",
-                "error": e.to_string()
-            }))
-        }
-    }
 }
