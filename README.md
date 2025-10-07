@@ -150,12 +150,14 @@ v0.2.0
 -------------------------------------
 Backend
 - [ ] schema: stock meta (cap, vol, eps, etc., kd, macd, ma)
-- [ ] schema: 1W data (OHLC)
+- [x] schema: 1W data (OHLC)
 - [ ] schema: job (type, status, detail)
-- [ ] migration
+- [x] migration
 - [ ] fn: crawl_meta(ticker) -> Meta (log)
 - [ ] fn: crawl_price(ticker) -> 1WPrice (log)
-- [ ] test above
+- [ ] fn: create_jobs(TJob) -> Result<(), Error>
+- [ ] fn: run_jobs(TJob) -> Result<(), Error>
+- [x] test above
 Front
 - [ ] logs page
 - [ ] jobs page
