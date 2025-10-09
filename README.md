@@ -10,8 +10,8 @@ Reap long candles.
 - auto 1D KD monitor:
   - custom add by user, batch add
 - design KD metric:
-  - derivative of MACD nearing dip, what's the behaviour, study
-  - do it for 1W and 1M
+  - 1W KD 30 alert
+  - derivative of MACD D-Line nearing dip, approaching zero, when to alert
 - User can search ticker and get 1W chart with company meta
 
 ### Resource
@@ -154,7 +154,7 @@ Backend
 - [ ] schema: job (type, status, detail)
 - [x] migration
 - [ ] fn: crawl_meta(ticker) -> Meta (log)
-- [ ] fn: crawl_price(ticker) -> 1WPrice (log)
+- [x] fn: crawl_price(ticker) -> 1WPrice (log)
 - [ ] fn: create_jobs(TJob) -> Result<(), Error>
 - [ ] fn: run_jobs(TJob) -> Result<(), Error>
 - [x] test above

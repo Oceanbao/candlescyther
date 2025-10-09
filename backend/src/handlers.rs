@@ -37,12 +37,6 @@ pub async fn check_handler(State(state): State<AppState>) -> Json<Value> {
 
 // Handler for /logs endpoint.
 pub async fn log_handler(State(state): State<AppState>) -> Json<Value> {
-    logit(
-        &state,
-        LogEntry::new(LogLevel::Debug, "pre-select", "log_handler", 93),
-    )
-    .await;
-
     match sqlx::query_as!(LogEntry, "SELECT * FROM logging LIMIT 10")
         .fetch_all(&state.db)
         .await

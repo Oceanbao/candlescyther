@@ -2,7 +2,7 @@ use backend::{
     app::AppState,
     handlers::{check_handler, log_handler},
 };
-use std::time::Duration;
+use std::{env, time::Duration};
 use tracing::info;
 
 use axum::{Router, routing::get};
@@ -14,19 +14,12 @@ async fn main() -> anyhow::Result<()> {
 
     tracing_subscriber::fmt::init();
 
-    // let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-    // if !std::path::Path::new("db").exists() {
-    //     fs::create_dir("db")?;
-    // }
-    // let path_buf = env::current_dir()?;
-    // info!("CWD --------------------------- : {}", path_buf.display());
+    let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
 
-    let database_url = "sqlite:///db/database.db?mode=rwc";
-
-    match sqlx::Sqlite::database_exists(database_url).await {
+    match sqlx::Sqlite::database_exists(&database_url).await {
         Ok(exist) => {
             if !exist {
-                match sqlx::Sqlite::create_database(database_url).await {
+                match sqlx::Sqlite::create_database(&database_url).await {
                     Ok(_) => info!("Database created."),
                     Err(e) => info!("Database creation failed: {}", e),
                 }
@@ -41,7 +34,7 @@ async fn main() -> anyhow::Result<()> {
     let pool = SqlitePoolOptions::new()
         .max_connections(5)
         .acquire_timeout(Duration::from_secs(3))
-        .connect(database_url)
+        .connect(&database_url)
         .await?;
 
     sqlx::migrate!("./migrations").run(&pool).await?;
