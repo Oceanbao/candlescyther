@@ -17,7 +17,6 @@ pub enum JobStatus {
 #[sqlx(rename_all = "lowercase")]
 pub enum JobType {
     CrawlPrice,
-    // Add more job types as needed
 }
 
 #[derive(Debug, Clone, FromRow)]
@@ -36,4 +35,12 @@ pub struct JobResult {
     pub success: bool,
     pub output: Option<serde_json::Value>,
     pub error: Option<String>,
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum JobError {
+    #[error("Serialization error: {0}")]
+    Serialization(#[from] serde_json::Error),
+    #[error("Job execution error: {0}")]
+    Other(String),
 }

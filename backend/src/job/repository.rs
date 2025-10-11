@@ -1,38 +1,28 @@
 use async_trait::async_trait;
 use sqlx::SqlitePool;
 
-use crate::job::model::{Job, JobStatus, JobType};
-
-#[derive(Debug, thiserror::Error)]
-pub enum JobError {
-    #[error("Database error: {0}")]
-    Database(#[from] sqlx::Error),
-    #[error("Serialization error: {0}")]
-    Serialization(#[from] serde_json::Error),
-    #[error("Job execution error: {0}")]
-    Execution(String),
-}
+use crate::job::{
+    model::{Job, JobStatus, JobType},
+    runner::RunnerError,
+};
 
 #[async_trait]
 pub trait JobRepository: Send + Sync {
-    async fn create_job(
-        &self,
-        job_type: JobType,
-        payload: serde_json::Value,
-    ) -> Result<i64, JobError>;
-    async fn get_pending_jobs(&self, limit: usize) -> Result<Vec<Job>, JobError>;
+    async fn create_jobs(&self, jobs: Vec<(JobType, serde_json::Value)>)
+    -> Result<(), RunnerError>;
+    async fn get_pending_jobs(&self, limit: usize) -> Result<Vec<Job>, RunnerError>;
     async fn update_job_status(
         &self,
         job_id: i64,
         status: JobStatus,
         error_message: Option<String>,
-    ) -> Result<(), JobError>;
-    async fn mark_job_running(&self, job_id: i64) -> Result<(), JobError>;
+    ) -> Result<(), RunnerError>;
+    async fn mark_job_running(&self, job_id: i64) -> Result<(), RunnerError>;
     async fn mark_job_done(
         &self,
         job_id: i64,
         output: Option<serde_json::Value>,
-    ) -> Result<(), JobError>;
+    ) -> Result<(), RunnerError>;
 }
 
 pub struct SqliteJobRepository {
@@ -47,29 +37,34 @@ impl SqliteJobRepository {
 
 #[async_trait]
 impl JobRepository for SqliteJobRepository {
-    async fn create_job(
+    async fn create_jobs(
         &self,
-        job_type: JobType,
-        payload: serde_json::Value,
-    ) -> Result<i64, JobError> {
+        jobs: Vec<(JobType, serde_json::Value)>,
+    ) -> Result<(), RunnerError> {
         let now = chrono::Utc::now().to_string();
         let query = r#"
             INSERT INTO jobs (job_type, job_status, payload, created_at, updated_at)
             VALUES ($1, $2, $3, $4, $4)
         "#;
 
-        let row = sqlx::query(query)
-            .bind(job_type)
-            .bind(JobStatus::Pending)
-            .bind(payload)
-            .bind(now)
-            .execute(&self.pool)
-            .await?;
+        let tx = self.pool.begin().await?;
 
-        Ok(row.last_insert_rowid())
+        for job in jobs {
+            let _row = sqlx::query(query)
+                .bind(job.0)
+                .bind(JobStatus::Pending)
+                .bind(job.1)
+                .bind(now.clone())
+                .execute(&self.pool)
+                .await?;
+        }
+
+        tx.commit().await?;
+
+        Ok(())
     }
 
-    async fn get_pending_jobs(&self, limit: usize) -> Result<Vec<Job>, JobError> {
+    async fn get_pending_jobs(&self, limit: usize) -> Result<Vec<Job>, RunnerError> {
         let query = r#"
             SELECT * FROM jobs
             WHERE job_status = 'pending'
@@ -85,7 +80,7 @@ impl JobRepository for SqliteJobRepository {
         Ok(jobs)
     }
 
-    async fn mark_job_running(&self, job_id: i64) -> Result<(), JobError> {
+    async fn mark_job_running(&self, job_id: i64) -> Result<(), RunnerError> {
         let now = chrono::Utc::now().to_string();
         let query = r#"
             UPDATE jobs
@@ -97,6 +92,7 @@ impl JobRepository for SqliteJobRepository {
             .bind(job_id)
             .execute(&self.pool)
             .await?;
+
         Ok(())
     }
 
@@ -104,7 +100,7 @@ impl JobRepository for SqliteJobRepository {
         &self,
         job_id: i64,
         output: Option<serde_json::Value>,
-    ) -> Result<(), JobError> {
+    ) -> Result<(), RunnerError> {
         let now = chrono::Utc::now().to_string();
         let query = r#"
             UPDATE jobs
@@ -117,6 +113,7 @@ impl JobRepository for SqliteJobRepository {
             .bind(job_id)
             .execute(&self.pool)
             .await?;
+
         Ok(())
     }
 
@@ -125,7 +122,7 @@ impl JobRepository for SqliteJobRepository {
         job_id: i64,
         status: JobStatus,
         error_message: Option<String>,
-    ) -> Result<(), JobError> {
+    ) -> Result<(), RunnerError> {
         let now = chrono::Utc::now().to_string();
         let query = r#"
             UPDATE jobs
@@ -139,6 +136,7 @@ impl JobRepository for SqliteJobRepository {
             .bind(now)
             .execute(&self.pool)
             .await?;
+
         Ok(())
     }
 }

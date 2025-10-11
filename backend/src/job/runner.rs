@@ -5,13 +5,21 @@ use tokio::sync::Semaphore;
 use crate::job::{
     handler::JobHandlerRegistry,
     model::{Job, JobStatus},
-    repository::{JobError, JobRepository},
+    repository::JobRepository,
 };
 
 pub struct JobRunner {
     repository: Arc<dyn JobRepository>,
     handler_registry: Arc<JobHandlerRegistry>,
     concurrency_limit: Arc<Semaphore>,
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum RunnerError {
+    #[error("Database error: {0}")]
+    Database(#[from] sqlx::Error),
+    #[error("Job execution error: {message}")]
+    Execution { job_id: i64, message: String },
 }
 
 impl JobRunner {
@@ -27,15 +35,24 @@ impl JobRunner {
         }
     }
 
-    pub async fn run(&self) -> Result<(), JobError> {
+    // NOTE: This is handled by the initiator in a server handler.
+    // If err, it's non-task error and should be logged.
+    pub async fn run(&self) -> Result<(), RunnerError> {
+        let wait_sec = 1;
+        let mut timer = tokio::time::interval(tokio::time::Duration::from_secs(wait_sec));
         let mut looped = 0;
+
         loop {
+            println!("run loop {looped}");
+
+            timer.tick().await;
+
+            // FIXME: refine the num jobs each loop gets
+            // NOTE: this is diff the `concurrency_limit`
             let pending_jobs = self.repository.get_pending_jobs(10).await?;
 
             if pending_jobs.is_empty() {
-                // Wait before checking again
-                tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
-
+                // FIXME: refine this
                 looped += 1;
                 if looped == 2 {
                     return Ok(());
@@ -67,9 +84,24 @@ impl JobRunner {
 
             // Wait for all jobs in this batch to complete
             for handle in handles {
-                if let Err(e) = handle.await {
-                    // FIXME: handle error, write error backinto db
-                    eprintln!("Job processing task panicked: {:?}", e);
+                match handle.await {
+                    Ok(a) => {
+                        if let Err(e) = a {
+                            match e {
+                                RunnerError::Execution { job_id, message } => {
+                                    self.repository
+                                        .update_job_status(job_id, JobStatus::Error, Some(message))
+                                        .await?;
+                                }
+                                RunnerError::Database(e) => {
+                                    eprintln!("{e}");
+                                }
+                            }
+                        }
+                    }
+                    Err(join_err) => {
+                        eprintln!("Log this join handler error {join_err}");
+                    }
                 }
             }
 
@@ -84,17 +116,23 @@ impl JobRunner {
         job: Job,
         repository: Arc<dyn JobRepository>,
         handler_registry: Arc<JobHandlerRegistry>,
-    ) -> Result<(), JobError> {
+    ) -> Result<(), RunnerError> {
         // Mark job as running
         repository.mark_job_running(job.id).await?;
 
         // Find appropriate handler
-        let handler = handler_registry.get_handler(&job.job_type).ok_or_else(|| {
-            JobError::Execution(format!("No handler for job type: {:?}", job.job_type))
-        })?;
+        let handler =
+            handler_registry
+                .get_handler(&job.job_type)
+                .ok_or_else(|| RunnerError::Execution {
+                    job_id: job.id,
+                    message: format!("No handler for job type: {:?}", job.job_type),
+                })?;
 
         // Execute the job
+        // FIXME: refine the logic in error
         match handler.handle(&job).await {
+            // Job result
             Ok(result) => {
                 if result.success {
                     repository.mark_job_done(job.id, result.output).await?;
@@ -105,11 +143,12 @@ impl JobRunner {
                 }
                 Ok(())
             }
-            Err(error_msg) => {
+            // Job error
+            Err(e) => {
                 repository
-                    .update_job_status(job.id, JobStatus::Error, Some(error_msg))
+                    .update_job_status(job.id, JobStatus::Error, Some(e.to_string()))
                     .await?;
-                Err(JobError::Execution("Job handler failed".to_string()))
+                Ok(())
             }
         }
     }
@@ -137,33 +176,30 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_() {
+    async fn test_jobs() {
         let pool = setup_test_db().await.unwrap();
-
         let repository = Arc::new(SqliteJobRepository::new(pool));
-
-        // Initialize job handlers
-        let mut handler_registry = JobHandlerRegistry::new();
 
         let crawlprice_handler = CrawlPriceHandler;
 
+        let mut handler_registry = JobHandlerRegistry::new();
         handler_registry.register_handler(Arc::new(crawlprice_handler));
 
-        let handler_registry = Arc::new(handler_registry);
+        let concurrency = 5;
 
-        // Create job runner
-        let runner = JobRunner::new(repository.clone(), handler_registry, 5); // Max 5 concurrent jobs
+        let runner = JobRunner::new(repository.clone(), Arc::new(handler_registry), concurrency);
 
-        runner
-            .repository
-            .create_job(
+        let mut jobs = vec![];
+        for i in 0..15 {
+            jobs.push((
                 JobType::CrawlPrice,
                 json!(CrawlPricePayload {
-                    ticker: "105.APPL".to_string(),
+                    ticker: format!("10{}.APPL", i + 1),
                 }),
-            )
-            .await
-            .unwrap();
+            ));
+        }
+
+        runner.repository.create_jobs(jobs).await.unwrap();
 
         runner.run().await.unwrap();
 
@@ -176,12 +212,16 @@ mod tests {
             .await;
 
         assert!(jobs.is_ok());
-
         let jobs = jobs.unwrap();
-        let first = jobs.first().unwrap();
+        assert_eq!(jobs.len(), 15);
 
+        let first = jobs.first().unwrap();
         assert_eq!(first.job_type, JobType::CrawlPrice);
         assert_eq!(first.job_status, JobStatus::Done);
-        assert_eq!(first.payload, json!({ "crawled": "105.APPL"}));
+        assert_eq!(first.payload, json!({ "crawled": "101.APPL"}));
+
+        let last = jobs.last().unwrap();
+        assert_eq!(last.job_type, JobType::CrawlPrice);
+        assert_eq!(last.job_status, JobStatus::Done);
     }
 }

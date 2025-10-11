@@ -3,12 +3,12 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use crate::job::model::{Job, JobResult, JobType};
+use crate::job::model::{Job, JobError, JobResult, JobType};
 
 #[async_trait]
 pub trait JobHandler: Send + Sync {
     fn job_type(&self) -> JobType;
-    async fn handle(&self, job: &Job) -> Result<JobResult, String>;
+    async fn handle(&self, job: &Job) -> Result<JobResult, JobError>;
 }
 
 // Type alias for boxed handlers
@@ -36,7 +36,15 @@ impl JobHandlerRegistry {
     }
 }
 
+// ---------------------------------------------------------------
+// ---------------------------------------------------------------
+
 pub struct CrawlPriceHandler;
+
+#[derive(Serialize, Deserialize)]
+pub struct CrawlPricePayload {
+    pub ticker: String,
+}
 
 #[async_trait]
 impl JobHandler for CrawlPriceHandler {
@@ -44,14 +52,15 @@ impl JobHandler for CrawlPriceHandler {
         JobType::CrawlPrice
     }
 
-    async fn handle(&self, job: &Job) -> Result<JobResult, String> {
-        let payload: CrawlPricePayload = serde_json::from_value(job.payload.clone())
-            .map_err(|e| format!("Failed to parse processing payload: {}", e))?;
+    async fn handle(&self, job: &Job) -> Result<JobResult, JobError> {
+        let payload: CrawlPricePayload =
+            serde_json::from_value(job.payload.clone()).map_err(JobError::Serialization)?;
 
-        // Simulate data processing
+        // FIXME: refine logging for prod and test
         println!("Crawling  {:?}", payload.ticker);
         tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
 
+        // FIXME: what is the sucess: false case?
         Ok(JobResult {
             success: true,
             output: Some(serde_json::json!({
@@ -60,9 +69,4 @@ impl JobHandler for CrawlPriceHandler {
             error: None,
         })
     }
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct CrawlPricePayload {
-    pub ticker: String,
 }
