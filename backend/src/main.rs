@@ -1,6 +1,6 @@
-use backend::{
-    app::AppState,
-    handlers::{check_handler, log_handler},
+use backend::infra::http::{
+    handler::{check_handler, log_handler},
+    model::AppState,
 };
 use std::{env, time::Duration};
 use tracing::info;

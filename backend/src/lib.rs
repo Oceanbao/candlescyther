@@ -1,6 +1,4 @@
-pub mod app;
-pub mod crawler;
-pub mod handlers;
+pub mod application;
+pub mod domain;
+pub mod infra;
 pub mod job;
-pub mod logging;
-pub mod repository;

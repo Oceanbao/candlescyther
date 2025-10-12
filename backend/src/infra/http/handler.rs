@@ -2,8 +2,8 @@ use axum::{Json, extract::State};
 use serde_json::{Value, json};
 use sqlx::sqlite::{self};
 
-use crate::{
-    app::{AppState, User},
+use crate::infra::{
+    http::model::{AppState, User},
     logging::{LogEntry, LogLevel, logit},
 };
 

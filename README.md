@@ -166,11 +166,6 @@ Backend
 - [x] fn: create_jobs(TJob) -> Result<(), Error>
 - [x] fn: run_jobs(TJob) -> Result<(), Error>
 - [x] test above
-- [ ] fix up log and logit()
-Front
-- [ ] logs page
-- [ ] jobs page
-- [ ] tickers info (pagination) (table) (click to see price chart)
 
 v0.3.0
 -------------------------------------
@@ -182,6 +177,9 @@ Backend
 - [ ] cron: for all tickers, crawl_price()
 - [ ] openAPI all routes
 Front
+- [ ] logs page
+- [ ] jobs page
+- [ ] tickers info (pagination) (table) (click to see price chart)
 
 Features
 - [ ] job: custom submit via endpoint with auto run()

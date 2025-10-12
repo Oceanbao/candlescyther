@@ -51,7 +51,7 @@ pub async fn insert_klines(pool: &Pool<Sqlite>, klines: Vec<Kline>) -> Result<()
 mod tests {
     use sqlx::{SqlitePool, sqlite::SqlitePoolOptions};
 
-    use crate::repository::{Kline, insert_klines};
+    use crate::infra::storage::repository::{Kline, insert_klines};
 
     async fn setup_test_db() -> Result<SqlitePool, sqlx::Error> {
         // Using a unique database URL for each test run enhances isolation.

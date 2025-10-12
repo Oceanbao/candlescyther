@@ -5,9 +5,9 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::{
-    crawler::crawl_kline_eastmoney,
+    infra::data::crawler::crawl_kline_eastmoney,
+    infra::storage::repository::insert_klines,
     job::model::{Job, JobError, JobResult, JobType},
-    repository::insert_klines,
 };
 
 #[async_trait]

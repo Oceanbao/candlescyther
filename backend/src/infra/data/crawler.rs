@@ -2,7 +2,7 @@ use anyhow::bail;
 use chrono::{Datelike, NaiveDate};
 use serde::{Deserialize, Serialize};
 
-use crate::repository::Kline;
+use crate::infra::storage::repository::Kline;
 
 // crawl_kline_eastmoney(url) -> Result<Vec<Kline>, Error>
 // url2text(url) -> raw
@@ -164,7 +164,7 @@ fn date_string_to_i32(date_str: &str) -> Result<i32, anyhow::Error> {
 
 #[cfg(test)]
 mod tests {
-    use crate::crawler::{
+    use crate::infra::data::crawler::{
         RawPriceEastmoney, RawPriceEastmoneyData, crawl_kline_eastmoney, create_kline_eastmoney,
         parse_kline_eastmoney, parse_raw_price_eastmoney, url2text,
     };

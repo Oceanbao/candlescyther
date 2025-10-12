@@ -158,6 +158,7 @@ mod tests {
     use sqlx::{SqlitePool, sqlite::SqlitePoolOptions};
 
     use crate::{
+        infra::storage::repository::Kline,
         job::{
             handler::{
                 CrawlPriceHandler, CrawlPricePayload, CrawlTestHandler, CrawlTestPayload,
@@ -167,7 +168,6 @@ mod tests {
             repository::SqliteJobRepository,
             runner::JobRunner,
         },
-        repository::Kline,
     };
 
     async fn setup_test_db() -> Result<SqlitePool, sqlx::Error> {
