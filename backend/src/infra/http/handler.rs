@@ -3,7 +3,7 @@ use serde_json::{Value, json};
 use sqlx::sqlite::{self};
 
 use crate::infra::{
-    http::model::{AppState, User},
+    http::server::{AppState, User},
     logging::{LogEntry, LogLevel, logit},
 };
 

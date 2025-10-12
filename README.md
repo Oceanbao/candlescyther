@@ -96,7 +96,9 @@ type RawDailyCrawl struct {
 
 ## Backend Service
 
-- "/new/[ticker]" GET
+- "/ticker/[ticker]" GET
+  - IF in storage return ELSE return not found
+- "/ticker/new/[ticker]" GET
   - verify ticker
   - if ok:
     - crawl ticker info, market cap, key meta for sorting
@@ -109,7 +111,7 @@ type RawDailyCrawl struct {
 - CRON: every weekend Friday night, crawl all tickers weekly price
   - stores them (optimize db)
   - compute MACD, KD, store (another table)
-- "/kd" GET returns all KD and MACD scores
+- "/signal" GET returns all KD and MACD scores
 - "/price/[ticker]" GET returns prices (front re-compute macd/kd)
 - CRON: auto scan some hot list 1W price and store and compute (make a route)
 - FRONT: show list, show chart
@@ -157,11 +159,9 @@ crawljob runner
  - run() loop v1 until no more 'pending'
  - logit()
 Backend
-- [ ] schema: stock meta (cap, vol, eps, etc., kd, macd, ma)
 - [x] schema: 1W data (OHLC)
 - [x] schema: job (type, status, detail)
 - [x] migration
-- [ ] fn: crawl_meta(ticker) -> Meta (log)
 - [x] fn: crawl_price(ticker) -> 1WPrice (log)
 - [x] fn: create_jobs(TJob) -> Result<(), Error>
 - [x] fn: run_jobs(TJob) -> Result<(), Error>
@@ -170,9 +170,9 @@ Backend
 v0.3.0
 -------------------------------------
 Backend
+- [ ] route GET "/kd" QUERY with param to get kd table
 - [ ] route GET "/new/[ticker]" COMMAND runs through crawls and store (async) (log)
 - [ ] route GET "/jobs" QUERY with param to get job log
-- [ ] route GET "/kd" QUERY with param to get kd table
 - [ ] route GET "/price/[ticker]" QUERY to get price table per ticker
 - [ ] cron: for all tickers, crawl_price()
 - [ ] openAPI all routes

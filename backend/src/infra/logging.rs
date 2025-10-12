@@ -2,7 +2,7 @@ use std::{borrow::Cow, fmt::Display};
 
 use serde::Serialize;
 
-use crate::infra::http::model::AppState;
+use crate::infra::http::server::AppState;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)] // Ensure it takes up only 1 byte
