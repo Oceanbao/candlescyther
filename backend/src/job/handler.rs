@@ -1,9 +1,14 @@
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
+use sqlx::{Pool, Sqlite};
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use crate::job::model::{Job, JobError, JobResult, JobType};
+use crate::{
+    crawler::crawl_kline_eastmoney,
+    job::model::{Job, JobError, JobResult, JobType},
+    repository::insert_klines,
+};
 
 #[async_trait]
 pub trait JobHandler: Send + Sync {
@@ -39,11 +44,15 @@ impl JobHandlerRegistry {
 // ---------------------------------------------------------------
 // ---------------------------------------------------------------
 
-pub struct CrawlPriceHandler;
+#[derive(Clone)]
+pub struct CrawlPriceHandler {
+    pub pool: Pool<Sqlite>,
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct CrawlPricePayload {
     pub ticker: String,
+    pub url: String,
 }
 
 #[async_trait]
@@ -56,17 +65,83 @@ impl JobHandler for CrawlPriceHandler {
         let payload: CrawlPricePayload =
             serde_json::from_value(job.payload.clone()).map_err(JobError::Serialization)?;
 
-        // FIXME: refine logging for prod and test
-        println!("Crawling  {:?}", payload.ticker);
-        tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+        let klines = match crawl_kline_eastmoney(&payload.url).await {
+            Ok(klines) => klines,
+            Err(e) => {
+                return Ok(JobResult {
+                    success: false,
+                    output: None,
+                    error: Some(e.to_string()),
+                });
+            }
+        };
 
         // FIXME: what is the sucess: false case?
-        Ok(JobResult {
-            success: true,
-            output: Some(serde_json::json!({
-                "crawled": format!("{}", payload.ticker),
-            })),
-            error: None,
-        })
+        match insert_klines(&self.pool, klines).await {
+            Ok(()) => Ok(JobResult {
+                success: true,
+                output: Some(serde_json::json!({
+                    "crawled price": format!("{}", payload.ticker),
+                })),
+                error: None,
+            }),
+            Err(e) => Err(JobError::Other(e.to_string())),
+        }
+    }
+}
+
+// ---------------------------------------------------------------
+// ---------------------------------------------------------------
+
+pub struct CrawlTestHandler;
+
+#[derive(Serialize, Deserialize)]
+pub struct CrawlTestPayload {
+    pub url: String,
+}
+
+#[async_trait]
+impl JobHandler for CrawlTestHandler {
+    fn job_type(&self) -> JobType {
+        JobType::CrawlTest
+    }
+
+    async fn handle(&self, job: &Job) -> Result<JobResult, JobError> {
+        let payload: CrawlTestPayload =
+            serde_json::from_value(job.payload.clone()).map_err(JobError::Serialization)?;
+
+        // FIXME: refine logging for prod and test
+        println!("Crawling  {:?}", payload.url);
+        let res = url_get(&payload.url).await;
+
+        // FIXME: what is the sucess: false case?
+        match res {
+            Ok(data) => Ok(JobResult {
+                success: true,
+                output: Some(data),
+                error: None,
+            }),
+            Err(e) => Ok(JobResult {
+                success: false,
+                output: None,
+                error: Some(e.to_string()),
+            }),
+        }
+    }
+}
+
+async fn url_get(url: &str) -> Result<serde_json::Value, anyhow::Error> {
+    match ureq::get(url).call() {
+        Ok(mut resp) => {
+            let text = resp.body_mut().read_to_string()?;
+            let data: serde_json::Value = serde_json::from_str(&text)?;
+            Ok(data)
+        }
+        Err(ureq::Error::StatusCode(code)) => {
+            anyhow::bail!("HTTP error: {code}",)
+        }
+        Err(e) => {
+            anyhow::bail!("Non-HTTP error: {e}",)
+        }
     }
 }

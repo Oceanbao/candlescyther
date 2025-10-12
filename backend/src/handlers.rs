@@ -11,7 +11,7 @@ use crate::{
 pub async fn check_handler(State(state): State<AppState>) -> Json<Value> {
     logit(
         &state,
-        LogEntry::new(LogLevel::Debug, "pre-select", "check_handler", 64),
+        LogEntry::new(LogLevel::Debug, "pre-select", "check_handler", 15),
     )
     .await;
 

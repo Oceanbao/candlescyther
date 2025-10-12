@@ -19,6 +19,10 @@ Reap long candles.
 **1D**
 <https://54.push2his.eastmoney.com/api/qt/stock/kline/get?cb=jQuery35106707668456928451_1695010059469&secid=105.TSLA&ut=fa5fd1943c7b386f172d6893dbfba10b&fields1=f1%2Cf2%2Cf3%2Cf4%2Cf5%2Cf6&fields2=f51%2Cf52%2Cf53%2Cf54%2Cf55%2Cf56%2Cf57%2Cf58%2Cf59%2Cf60%2Cf61&klt=101&fqt=1&beg=0&end=20500101&lmt=1200&_=1695010059524>
 
+klt=101 -> day
+klt=102 -> week
+klt=103 -> month
+
 **1W**
 <https://push2his.eastmoney.com/api/qt/stock/kline/get?cb=jQuery35105424247560587396_1758630789935&secid=105.APP&ut=fa5fd1943c7b386f172d6893dbfba10b&fields1=f1%2Cf2%2Cf3%2Cf4%2Cf5%2Cf6&fields2=f51%2Cf52%2Cf53%2Cf54%2Cf55%2Cf56%2Cf57%2Cf58%2Cf59%2Cf60%2Cf61&klt=102&fqt=1&beg=0&end=20500101&smplmt=755&lmt=1000000&_=1758630789945>
 
@@ -148,6 +152,10 @@ Front
 
 v0.2.0
 -------------------------------------
+crawljob runner
+ - create jobs (jobs) -> write db
+ - run() loop v1 until no more 'pending'
+ - logit()
 Backend
 - [ ] schema: stock meta (cap, vol, eps, etc., kd, macd, ma)
 - [x] schema: 1W data (OHLC)
@@ -158,6 +166,7 @@ Backend
 - [x] fn: create_jobs(TJob) -> Result<(), Error>
 - [x] fn: run_jobs(TJob) -> Result<(), Error>
 - [x] test above
+- [ ] fix up log and logit()
 Front
 - [ ] logs page
 - [ ] jobs page
@@ -173,4 +182,11 @@ Backend
 - [ ] cron: for all tickers, crawl_price()
 - [ ] openAPI all routes
 Front
+
+Features
+- [ ] job: custom submit via endpoint with auto run()
+- [ ] CRUD endpoint for job_table
+- [ ] CRUD endpoint for log_table
+- [ ] CRUD endpoint for ticker_table (cascade price_table)
+- [ ] CRUD endpoint for price_table
 ```

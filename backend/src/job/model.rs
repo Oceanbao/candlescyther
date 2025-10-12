@@ -17,6 +17,7 @@ pub enum JobStatus {
 #[sqlx(rename_all = "lowercase")]
 pub enum JobType {
     CrawlPrice,
+    CrawlTest,
 }
 
 #[derive(Debug, Clone, FromRow)]

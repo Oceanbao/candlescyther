@@ -22,18 +22,17 @@ pub async fn crawl_kline_eastmoney(url: &str) -> Result<Vec<Kline>, anyhow::Erro
 
 // url2text GET url and returns text results.
 async fn url2text(url: &str) -> Result<String, anyhow::Error> {
-    let mut resp = ureq::get(url).call()?;
-
-    let text = resp.body_mut().read_to_string()?;
-
-    if resp.status().is_success() {
-        Ok(text)
-    } else {
-        anyhow::bail!(
-            "HTTP request failed with status: {} and message: {}",
-            resp.status(),
-            text
-        )
+    match ureq::get(url).call() {
+        Ok(mut resp) => {
+            let text = resp.body_mut().read_to_string()?;
+            Ok(text)
+        }
+        Err(ureq::Error::StatusCode(code)) => {
+            anyhow::bail!("HTTP error: {code}",)
+        }
+        Err(e) => {
+            anyhow::bail!("Non-HTTP error: {e}",)
+        }
     }
 }
 
@@ -193,7 +192,7 @@ mod tests {
             }
         }
 
-        let url = "https://dummyjson.com/tes";
+        let url = "https://dummyjson.com/http/404/bad";
         let text = url2text(url).await;
 
         match text {
@@ -201,7 +200,22 @@ mod tests {
                 panic!("Expected Err, but got Ok: {txt:?}");
             }
             Err(e) => {
-                assert_eq!(e.to_string(), "http status: 404");
+                assert_eq!(e.to_string(), "HTTP error: 404");
+            }
+        }
+
+        let url = "https://dummyjso.com/http/404/bad";
+        let text = url2text(url).await;
+
+        match text {
+            Ok(txt) => {
+                panic!("Expected Err, but got Ok: {txt:?}");
+            }
+            Err(e) => {
+                assert_eq!(
+                    e.to_string(),
+                    "Non-HTTP error: io: failed to lookup address information: nodename nor servname provided, or not known"
+                );
             }
         }
     }
