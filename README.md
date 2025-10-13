@@ -154,10 +154,6 @@ Front
 
 v0.2.0
 -------------------------------------
-crawljob runner
- - create jobs (jobs) -> write db
- - run() loop v1 until no more 'pending'
- - logit()
 Backend
 - [x] schema: 1W data (OHLC)
 - [x] schema: job (type, status, detail)

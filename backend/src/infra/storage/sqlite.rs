@@ -1,19 +1,31 @@
-use serde::{Deserialize, Serialize};
-use sqlx::{Pool, Sqlite, prelude::FromRow};
+use std::collections::HashSet;
 
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
-pub struct Kline {
-    pub k_ticker: String,
-    pub k_date: i32,
-    pub k_open: f64,
-    pub k_high: f64,
-    pub k_low: f64,
-    pub k_close: f64,
-    pub k_volume: f64,
-    pub k_value: f64,
-}
+use sqlx::{Pool, Sqlite};
 
+use crate::domain::model::Kline;
+
+// TODO: This is specific to kline insert with elaborate steps.
+// May want to split and redesign.
 pub async fn insert_klines(pool: &Pool<Sqlite>, klines: Vec<Kline>) -> Result<(), sqlx::Error> {
+    if klines.is_empty() {
+        return Ok(());
+    }
+
+    // NOTE: Extract all tickers.
+    let tickers: Vec<String> = klines
+        .iter()
+        .map(|k| k.k_ticker.clone())
+        .collect::<HashSet<_>>()
+        .into_iter()
+        .collect();
+
+    // NOTE: Clear all records per tickers.
+    for ticker in tickers {
+        let _ = sqlx::query!("DELETE FROM kline WHERE k_ticker = ?", ticker)
+            .execute(pool)
+            .await?;
+    }
+
     let batch_size = 5000;
     let chunks: Vec<Vec<Kline>> = klines
         .chunks(batch_size)
@@ -51,7 +63,7 @@ pub async fn insert_klines(pool: &Pool<Sqlite>, klines: Vec<Kline>) -> Result<()
 mod tests {
     use sqlx::{SqlitePool, sqlite::SqlitePoolOptions};
 
-    use crate::infra::storage::repository::{Kline, insert_klines};
+    use crate::infra::storage::sqlite::{Kline, insert_klines};
 
     async fn setup_test_db() -> Result<SqlitePool, sqlx::Error> {
         // Using a unique database URL for each test run enhances isolation.
@@ -102,6 +114,16 @@ mod tests {
             klines.extend(kline);
         }
 
+        insert_klines(&pool, klines.clone()).await.unwrap();
+
+        let (count,): (i64,) = sqlx::query_as("SELECT COUNT(*) from kline")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+
+        assert_eq!(count, 24000);
+
+        // Check for clearing function.
         insert_klines(&pool, klines).await.unwrap();
 
         let (count,): (i64,) = sqlx::query_as("SELECT COUNT(*) from kline")

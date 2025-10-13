@@ -2,7 +2,7 @@ use anyhow::bail;
 use chrono::{Datelike, NaiveDate};
 use serde::{Deserialize, Serialize};
 
-use crate::infra::storage::repository::Kline;
+use crate::domain::model::Kline;
 
 // crawl_kline_eastmoney(url) -> Result<Vec<Kline>, Error>
 // url2text(url) -> raw
@@ -37,7 +37,7 @@ async fn url2text(url: &str) -> Result<String, anyhow::Error> {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-struct RawPriceEastmoney {
+pub struct RawPriceEastmoney {
     #[serde(rename = "data")]
     data: RawPriceEastmoneyData,
 }
@@ -52,7 +52,7 @@ struct RawPriceEastmoneyData {
     pub klines: Vec<String>,
 }
 
-fn parse_raw_price_eastmoney(raw: &str) -> Option<RawPriceEastmoney> {
+pub fn parse_raw_price_eastmoney(raw: &str) -> Option<RawPriceEastmoney> {
     let mut start_index = raw.find('(')?;
     start_index += 1;
     let end_index = raw.find(')')?;
@@ -106,7 +106,7 @@ pub struct KlineEastmoney {
     pub turnover: f64,
 }
 
-fn parse_kline_eastmoney(input: &str) -> Result<KlineEastmoney, anyhow::Error> {
+pub fn parse_kline_eastmoney(input: &str) -> Result<KlineEastmoney, anyhow::Error> {
     let parts: Vec<&str> = input.split(',').collect();
 
     if parts.len() != 11 {
@@ -130,7 +130,9 @@ fn parse_kline_eastmoney(input: &str) -> Result<KlineEastmoney, anyhow::Error> {
     Ok(kline)
 }
 
-fn create_kline_eastmoney(price_eastmoney: RawPriceEastmoney) -> Result<Vec<Kline>, anyhow::Error> {
+pub fn create_kline_eastmoney(
+    price_eastmoney: RawPriceEastmoney,
+) -> Result<Vec<Kline>, anyhow::Error> {
     let mut klines: Vec<Kline> = vec![];
     for kline_raw in price_eastmoney.data.klines {
         let kline = parse_kline_eastmoney(&kline_raw)?;

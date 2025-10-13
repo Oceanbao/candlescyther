@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use crate::{
     infra::data::crawler::crawl_kline_eastmoney,
-    infra::storage::repository::insert_klines,
+    infra::storage::sqlite::insert_klines,
     job::model::{Job, JobError, JobResult, JobType},
 };
 

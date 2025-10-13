@@ -158,7 +158,7 @@ mod tests {
     use sqlx::{SqlitePool, sqlite::SqlitePoolOptions};
 
     use crate::{
-        infra::storage::repository::Kline,
+        domain::model::Kline,
         job::{
             handler::{
                 CrawlPriceHandler, CrawlPricePayload, CrawlTestHandler, CrawlTestPayload,
@@ -178,7 +178,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_jobs_real_crawl() {
+    async fn test_jobs_dummy_crawl() {
         let pool = setup_test_db().await.unwrap();
         let repository = Arc::new(SqliteJobRepository::new(pool));
 
