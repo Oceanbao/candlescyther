@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, Type};
+use utoipa::ToSchema;
 
-#[derive(Default, Debug, Clone, Serialize, Deserialize, Type, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, Type, PartialEq, Eq, ToSchema)]
 #[sqlx(type_name = "job_status")]
 #[sqlx(rename_all = "lowercase")]
 pub enum JobStatus {
@@ -12,7 +13,7 @@ pub enum JobStatus {
     Error,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Type, Hash, Eq, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Type, Hash, Eq, PartialEq, ToSchema)]
 #[sqlx(type_name = "job_type")]
 #[sqlx(rename_all = "lowercase")]
 pub enum JobType {
@@ -21,7 +22,7 @@ pub enum JobType {
     ComputeSignal,
 }
 
-#[derive(Debug, Clone, FromRow)]
+#[derive(Debug, Clone, FromRow, ToSchema, Serialize)]
 pub struct Job {
     pub id: i64,
     pub job_status: JobStatus,

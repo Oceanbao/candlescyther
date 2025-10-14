@@ -1,11 +1,16 @@
-use backend::infra::http::{
-    handler::{check_handler, log_handler},
-    server::AppState,
+use backend::{
+    infra::http::{handler::create_routes, server::AppState},
+    job::{
+        handler::{ComputeSignalHandler, CrawlPriceHandler, JobHandlerRegistry},
+        repository::SqliteJobRepository,
+        runner::JobRunner,
+    },
 };
-use std::{env, time::Duration};
+use std::{env, fs, sync::Arc, time::Duration};
 use tracing::info;
+use utoipa::OpenApi;
+use utoipa_axum::router::OpenApiRouter;
 
-use axum::{Router, routing::get};
 use sqlx::{migrate::MigrateDatabase, sqlite::SqlitePoolOptions};
 
 #[tokio::main]
@@ -67,11 +72,48 @@ async fn main() -> anyhow::Result<()> {
 
     info!("Database initialized");
 
+    #[derive(OpenApi)]
+    #[openapi(
+        tags(
+            (name = "candlescyther", description = "Reap fat candles.")
+        )
+    )]
+    struct ApiDoc;
+
+    let crawltest_handler = CrawlPriceHandler { pool: pool.clone() };
+    let compute_signal_handler = ComputeSignalHandler { pool: pool.clone() };
+
+    let mut handler_registry = JobHandlerRegistry::new();
+    handler_registry.register_handler(Arc::new(crawltest_handler));
+    handler_registry.register_handler(Arc::new(compute_signal_handler));
+
+    let concurrency = 3;
+    let wait_ms = 1000;
+    let batch_size = concurrency;
+    let sqlite_repository = SqliteJobRepository { pool: pool.clone() };
+
+    let runner = JobRunner::new(
+        Arc::new(sqlite_repository),
+        Arc::new(handler_registry),
+        concurrency,
+        wait_ms,
+        batch_size,
+    );
+
+    let store = AppState { db: pool, runner };
+
+    let routes = create_routes(store);
+    let (router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
+        .nest("/api", routes)
+        .split_for_parts();
+
+    fs::write("./openapi.json", api.to_pretty_json().unwrap())?;
+
     // Build our application with a single route
-    let app = Router::new()
-        .route("/check", get(check_handler))
-        .route("/logs", get(log_handler))
-        .with_state(AppState { db: pool });
+    // let app = Router::new()
+    //     .route("/check", get(check_handler))
+    //     .route("/logs", get(log_handler))
+    //     .with_state(AppState { db: pool });
 
     // Start the cron job in a separate task
     // let cron_state = shared_state.clone();
@@ -81,10 +123,9 @@ async fn main() -> anyhow::Result<()> {
     //     }
     // });
 
-    // Run our app with hyper, listening globally on port 3000
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await?;
     info!("server up and listening on {}", listener.local_addr()?);
-    axum::serve(listener, app).await?;
+    axum::serve(listener, router.into_make_service()).await?;
 
     Ok(())
 }

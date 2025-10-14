@@ -20,7 +20,7 @@ pub async fn insert_klines(pool: &Pool<Sqlite>, klines: Vec<Kline>) -> Result<()
         .collect();
 
     // NOTE: Clear all records per tickers.
-    for ticker in tickers {
+    for ticker in &tickers {
         let _ = sqlx::query!("DELETE FROM klines WHERE k_ticker = ?", ticker)
             .execute(pool)
             .await?;
@@ -56,6 +56,33 @@ pub async fn insert_klines(pool: &Pool<Sqlite>, klines: Vec<Kline>) -> Result<()
         tx.commit().await?;
     }
 
+    // FIX: remove this when stock crawl is done.
+    let mut tx = pool.begin().await?;
+    for ticker in &tickers {
+        match sqlx::query!(
+            "INSERT INTO stocks (ticker) 
+                 VALUES (?)",
+            ticker,
+        )
+        .execute(&mut *tx)
+        .await
+        {
+            Ok(_) => {}
+            Err(e) => match e {
+                sqlx::Error::Database(e) => {
+                    let msg = e.message();
+                    if e.code().unwrap_or_default() == "1555" && msg.contains("UNIQUE constraint") {
+                        tracing::debug!("Ticker already exists.")
+                    }
+                }
+                _ => {
+                    tracing::debug!("Failed to write to `stocks`: {}", e.to_string());
+                }
+            },
+        }
+    }
+    tx.commit().await?;
+
     Ok(())
 }
 
@@ -63,7 +90,10 @@ pub async fn insert_klines(pool: &Pool<Sqlite>, klines: Vec<Kline>) -> Result<()
 mod tests {
     use sqlx::{SqlitePool, sqlite::SqlitePoolOptions};
 
-    use crate::infra::storage::sqlite::{Kline, insert_klines};
+    use crate::{
+        domain::model::Stock,
+        infra::storage::sqlite::{Kline, insert_klines},
+    };
 
     async fn setup_test_db() -> Result<SqlitePool, sqlx::Error> {
         // Using a unique database URL for each test run enhances isolation.
@@ -144,5 +174,12 @@ mod tests {
         assert_eq!(results[1].k_ticker, "105.AAPL");
         assert_eq!(results[0].k_date, 20200101);
         assert_eq!(results[1].k_date, 20200102);
+
+        let results: Vec<Stock> = sqlx::query_as("SELECT ticker FROM stocks")
+            .fetch_all(&pool)
+            .await
+            .unwrap();
+
+        assert_eq!(results.len(), 3);
     }
 }

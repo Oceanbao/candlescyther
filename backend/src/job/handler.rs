@@ -182,7 +182,7 @@ impl JobHandler for ComputeSignalHandler {
         for ticker in tickers {
             let klines = sqlx::query_as!(
                 Kline,
-                "SELECT * FROM klines WHERE k_ticker = ?",
+                "SELECT * FROM klines WHERE k_ticker = ? ORDER BY k_date ASC",
                 ticker.k_ticker
             )
             .fetch_all(&self.pool)

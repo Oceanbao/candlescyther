@@ -1,6 +1,8 @@
 use serde::Serialize;
 use sqlx::{SqlitePool, prelude::FromRow};
 
+use crate::job::runner::JobRunner;
+
 // HealthCheck record for serialization
 #[derive(Serialize, Debug, FromRow)]
 pub struct User {
@@ -12,4 +14,5 @@ pub struct User {
 #[derive(Clone)]
 pub struct AppState {
     pub db: SqlitePool,
+    pub runner: JobRunner,
 }

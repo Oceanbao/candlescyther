@@ -1,6 +1,7 @@
 use std::{borrow::Cow, fmt::Display};
 
 use serde::Serialize;
+use utoipa::ToSchema;
 
 use crate::infra::http::server::AppState;
 
@@ -28,7 +29,7 @@ impl Display for LogLevel {
     }
 }
 
-#[derive(Debug, sqlx::FromRow, Serialize)]
+#[derive(Debug, sqlx::FromRow, Serialize, ToSchema)]
 pub struct LogEntry<'a> {
     pub id: i64,
     pub log_timestamp: Cow<'a, str>,
@@ -75,6 +76,15 @@ impl<'a> LogEntry<'a> {
 }
 
 pub async fn logit(app_state: &AppState, entry: LogEntry<'_>) {
+    match entry.log_level {
+        0 => tracing::trace!("{}", entry.log_message),
+        1 => tracing::debug!("{}", entry.log_message),
+        2 => tracing::info!("{}", entry.log_message),
+        3 => tracing::warn!("{}", entry.log_message),
+        4 => tracing::error!("{}", entry.log_message),
+        _ => eprintln!("{}", entry.log_message),
+    }
+
     if let Err(e) = sqlx::query_as!(
         LogEntry,
         "INSERT INTO logs (log_timestamp, log_level, log_target, log_message, log_line) VALUES ($1, $2, $3, $4, $5)",

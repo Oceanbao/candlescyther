@@ -8,8 +8,9 @@ use crate::job::{
     repository::JobRepository,
 };
 
+#[derive(Clone)]
 pub struct JobRunner {
-    repository: Arc<dyn JobRepository>,
+    pub repository: Arc<dyn JobRepository>,
     handler_registry: Arc<JobHandlerRegistry>,
     concurrency_limit: Arc<Semaphore>,
     wait_ms: usize,

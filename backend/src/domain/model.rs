@@ -1,7 +1,13 @@
 use serde::{Deserialize, Serialize};
 use sqlx::prelude::FromRow;
+use utoipa::ToSchema;
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct Stock {
+    pub ticker: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
 pub struct Kline {
     pub k_ticker: String,
     pub k_date: i64,
@@ -13,7 +19,7 @@ pub struct Kline {
     pub k_value: f64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
 pub struct Signal {
     pub ticker: String,
     pub kdj_k: f64,
