@@ -1,6 +1,5 @@
 use axum::{Json, extract::State};
 use serde_json::{Value, json};
-use sqlx::sqlite::{self};
 
 use crate::infra::{
     http::server::{AppState, User},
@@ -15,7 +14,7 @@ pub async fn check_handler(State(state): State<AppState>) -> Json<Value> {
     )
     .await;
 
-    match sqlx::query_as::<sqlite::Sqlite, User>("SELECT * FROM user")
+    match sqlx::query_as!(User, "SELECT * FROM users")
         .fetch_all(&state.db)
         .await
     {
@@ -37,7 +36,7 @@ pub async fn check_handler(State(state): State<AppState>) -> Json<Value> {
 
 // Handler for /logs endpoint.
 pub async fn log_handler(State(state): State<AppState>) -> Json<Value> {
-    match sqlx::query_as!(LogEntry, "SELECT * FROM logging LIMIT 10")
+    match sqlx::query_as!(LogEntry, "SELECT * FROM logs LIMIT 10")
         .fetch_all(&state.db)
         .await
     {

@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT DISTINCT k_ticker FROM klines",
+  "describe": {
+    "columns": [
+      {
+        "name": "k_ticker",
+        "ordinal": 0,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "21e66a2a3608965f2625d135337ba0868c392de8b58b0e3a0e9788722a2338ec"
+}

@@ -65,6 +65,8 @@ impl JobRunner {
             let mut handles = Vec::new();
 
             for job in pending_jobs {
+                println!("-- job: {:#?} --", job.job_type);
+
                 let permit = self
                     .concurrency_limit
                     .clone()
@@ -158,11 +160,11 @@ mod tests {
     use sqlx::{SqlitePool, sqlite::SqlitePoolOptions};
 
     use crate::{
-        domain::model::Kline,
+        domain::model::{Kline, Signal},
         job::{
             handler::{
-                CrawlPriceHandler, CrawlPricePayload, CrawlTestHandler, CrawlTestPayload,
-                JobHandlerRegistry,
+                ComputeSignalHandler, ComputeSignalPayload, CrawlPriceHandler, CrawlPricePayload,
+                CrawlTestHandler, CrawlTestPayload, JobHandlerRegistry,
             },
             model::{Job, JobStatus, JobType},
             repository::SqliteJobRepository,
@@ -254,6 +256,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore = "network call to eastmoney"]
     async fn test_jobs_crawl_price_eastmoney() {
         let pool = setup_test_db().await.unwrap();
         let repository = Arc::new(SqliteJobRepository::new(pool));
@@ -314,7 +317,7 @@ mod tests {
             assert_eq!(job.error_message, None);
         }
 
-        let (count,): (i64,) = sqlx::query_as("SELECT COUNT(*) from kline")
+        let (count,): (i64,) = sqlx::query_as("SELECT COUNT(*) from klines")
             .fetch_one(&repository.pool)
             .await
             .unwrap();
@@ -324,7 +327,7 @@ mod tests {
         let results: Vec<Kline> = sqlx::query_as(
             r#"
             SELECT k_ticker, k_date, k_open, k_high, k_low, k_close, k_volume, k_value
-            FROM kline 
+            FROM klines
             WHERE k_ticker = '105.TSLA'
             ORDER BY k_date ASC
             LIMIT 2
@@ -338,5 +341,99 @@ mod tests {
         assert_eq!(results[1].k_ticker, "105.TSLA");
         assert_eq!(results[0].k_date, 20110126);
         assert_eq!(results[1].k_date, 20110127);
+    }
+
+    #[tokio::test]
+    #[ignore = "network call to eastmoney"]
+    async fn test_jobs_compute_signal_with_crawl() {
+        let pool = setup_test_db().await.unwrap();
+        let repository = Arc::new(SqliteJobRepository::new(pool));
+
+        let crawlprice_handler = CrawlPriceHandler {
+            pool: repository.pool.clone(),
+        };
+
+        let compute_signal_handler = ComputeSignalHandler {
+            pool: repository.pool.clone(),
+        };
+
+        let mut handler_registry = JobHandlerRegistry::new();
+        handler_registry.register_handler(Arc::new(crawlprice_handler));
+        handler_registry.register_handler(Arc::new(compute_signal_handler));
+
+        let concurrency = 1;
+        let wait_ms = 1000;
+        let batch_size = concurrency;
+
+        let runner = JobRunner::new(
+            repository.clone(),
+            Arc::new(handler_registry),
+            concurrency,
+            wait_ms,
+            batch_size,
+        );
+
+        let tickers = ["105.APP", "105.TSLA", "1.600635", "1.688981"];
+        let jobs: Vec<_> = tickers
+            .into_iter()
+            .map(|ticker| {
+                (
+                    JobType::CrawlPrice,
+                    json!(CrawlPricePayload {
+                        ticker: ticker.to_string(),
+                        url: format!("https://54.push2his.eastmoney.com/api/qt/stock/kline/get?cb=jQuery35106707668456928451_1695010059469&secid={}&ut=fa5fd1943c7b386f172d6893dbfba10b&fields1=f1%2Cf2%2Cf3%2Cf4%2Cf5%2Cf6&fields2=f51%2Cf52%2Cf53%2Cf54%2Cf55%2Cf56%2Cf57%2Cf58%2Cf59%2Cf60%2Cf61&klt=102&fqt=1&beg=0&end=20500101&lmt=1200&_=1695010059524", ticker)
+                    }),
+                )
+            })
+            .collect();
+
+        runner.repository.create_jobs(jobs).await.unwrap();
+        runner.run().await.unwrap();
+
+        // Compute Signal Job
+        let jobs: Vec<_> = vec![(JobType::ComputeSignal, json!(ComputeSignalPayload {}))];
+        runner.repository.create_jobs(jobs).await.unwrap();
+        runner.run().await.unwrap();
+
+        let query = r#"
+            SELECT * FROM jobs WHERE job_type = ?
+        "#;
+
+        let jobs = sqlx::query_as::<_, Job>(query)
+            .bind("computesignal")
+            .fetch_all(&repository.pool)
+            .await;
+
+        assert!(jobs.is_ok());
+        let jobs = jobs.unwrap();
+        assert_eq!(jobs.len(), 1);
+
+        for job in jobs {
+            assert_eq!(job.job_type, JobType::ComputeSignal);
+            assert_eq!(job.job_status, JobStatus::Done);
+            assert_eq!(job.payload, json!({ "update signals table": "ok" }));
+            assert_eq!(job.error_message, None);
+        }
+
+        let (count,): (i64,) = sqlx::query_as("SELECT COUNT(*) from signals")
+            .fetch_one(&repository.pool)
+            .await
+            .unwrap();
+
+        assert_eq!(count, tickers.len() as i64);
+
+        let results: Vec<Signal> = sqlx::query_as(
+            r#"
+            SELECT * FROM signals
+            "#,
+        )
+        .fetch_all(&repository.pool)
+        .await
+        .unwrap();
+
+        println!("{:#?}", results);
+
+        assert_eq!(results[0].ticker, "1.600635");
+        assert!(f64::abs(results[0].kdj_k - 76.42935683440258) < 1e-5);
     }
 }

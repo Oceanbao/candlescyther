@@ -21,7 +21,7 @@ pub async fn insert_klines(pool: &Pool<Sqlite>, klines: Vec<Kline>) -> Result<()
 
     // NOTE: Clear all records per tickers.
     for ticker in tickers {
-        let _ = sqlx::query!("DELETE FROM kline WHERE k_ticker = ?", ticker)
+        let _ = sqlx::query!("DELETE FROM klines WHERE k_ticker = ?", ticker)
             .execute(pool)
             .await?;
     }
@@ -38,7 +38,7 @@ pub async fn insert_klines(pool: &Pool<Sqlite>, klines: Vec<Kline>) -> Result<()
         // Batch commit.
         for kline in chunk {
             sqlx::query!(
-                "INSERT INTO kline (k_ticker, k_date, k_open, k_high, k_low, k_close, k_volume, k_value) 
+                "INSERT INTO klines (k_ticker, k_date, k_open, k_high, k_low, k_close, k_volume, k_value) 
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 kline.k_ticker,
                 kline.k_date,
@@ -74,7 +74,7 @@ mod tests {
         Ok(pool)
     }
 
-    pub fn generate_sequential_klines(count: usize, ticker: &str, start_date: i32) -> Vec<Kline> {
+    pub fn generate_sequential_klines(count: usize, ticker: &str, start_date: i64) -> Vec<Kline> {
         let mut klines = Vec::with_capacity(count);
 
         for i in 0..count {
@@ -90,7 +90,7 @@ mod tests {
 
             klines.push(Kline {
                 k_ticker: ticker.to_string(),
-                k_date: start_date + i as i32,
+                k_date: start_date + i as i64,
                 k_open: open,
                 k_high: high,
                 k_low: low,
@@ -116,7 +116,7 @@ mod tests {
 
         insert_klines(&pool, klines.clone()).await.unwrap();
 
-        let (count,): (i64,) = sqlx::query_as("SELECT COUNT(*) from kline")
+        let (count,): (i64,) = sqlx::query_as("SELECT COUNT(*) from klines")
             .fetch_one(&pool)
             .await
             .unwrap();
@@ -126,7 +126,7 @@ mod tests {
         // Check for clearing function.
         insert_klines(&pool, klines).await.unwrap();
 
-        let (count,): (i64,) = sqlx::query_as("SELECT COUNT(*) from kline")
+        let (count,): (i64,) = sqlx::query_as("SELECT COUNT(*) from klines")
             .fetch_one(&pool)
             .await
             .unwrap();
@@ -134,7 +134,7 @@ mod tests {
         assert_eq!(count, 24000);
 
         let results: Vec<Kline> = sqlx::query_as(
-            "SELECT k_ticker, k_date, k_open, k_high, k_low, k_close, k_volume, k_value FROM kline LIMIT 2"
+            "SELECT k_ticker, k_date, k_open, k_high, k_low, k_close, k_volume, k_value FROM klines LIMIT 2"
         )
             .fetch_all(&pool)
             .await

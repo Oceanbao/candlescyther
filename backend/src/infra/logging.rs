@@ -77,7 +77,7 @@ impl<'a> LogEntry<'a> {
 pub async fn logit(app_state: &AppState, entry: LogEntry<'_>) {
     if let Err(e) = sqlx::query_as!(
         LogEntry,
-        "INSERT INTO logging (log_timestamp, log_level, log_target, log_message, log_line) VALUES ($1, $2, $3, $4, $5)",
+        "INSERT INTO logs (log_timestamp, log_level, log_target, log_message, log_line) VALUES ($1, $2, $3, $4, $5)",
         entry.log_timestamp,
         entry.log_level,
         entry.log_target,

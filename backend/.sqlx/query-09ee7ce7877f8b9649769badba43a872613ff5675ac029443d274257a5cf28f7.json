@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO logs (log_timestamp, log_level, log_target, log_message, log_line) VALUES ($1, $2, $3, $4, $5)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 5
+    },
+    "nullable": []
+  },
+  "hash": "09ee7ce7877f8b9649769badba43a872613ff5675ac029443d274257a5cf28f7"
+}

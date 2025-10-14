@@ -16,7 +16,7 @@ pub struct KDJ {
 ///
 /// # Returns
 /// A vector of `KDJ` values, one for each input bar.
-fn compute_kdj(klines: Vec<Kline>) -> Vec<KDJ> {
+pub fn compute_kdj(klines: Vec<Kline>) -> Vec<KDJ> {
     let (closes, highs, lows) = destuct_klines(klines);
 
     let len = closes.len();

@@ -18,6 +18,7 @@ pub enum JobStatus {
 pub enum JobType {
     CrawlPrice,
     CrawlTest,
+    ComputeSignal,
 }
 
 #[derive(Debug, Clone, FromRow)]
@@ -42,6 +43,8 @@ pub struct JobResult {
 pub enum JobError {
     #[error("Serialization error: {0}")]
     Serialization(#[from] serde_json::Error),
+    #[error("Database error: {0}")]
+    Database(#[from] sqlx::Error),
     #[error("Job execution error: {0}")]
     Other(String),
 }

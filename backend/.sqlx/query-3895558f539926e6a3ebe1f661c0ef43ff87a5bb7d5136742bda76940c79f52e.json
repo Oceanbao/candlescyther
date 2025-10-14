@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM klines WHERE k_ticker = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "3895558f539926e6a3ebe1f661c0ef43ff87a5bb7d5136742bda76940c79f52e"
+}

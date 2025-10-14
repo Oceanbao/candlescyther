@@ -154,12 +154,12 @@ pub fn create_kline_eastmoney(
     Ok(klines)
 }
 
-fn date_string_to_i32(date_str: &str) -> Result<i32, anyhow::Error> {
+fn date_string_to_i32(date_str: &str) -> Result<i64, anyhow::Error> {
     let date = NaiveDate::parse_from_str(date_str, "%Y-%m-%d")?;
 
-    let year = date.year();
-    let month = date.month() as i32;
-    let day = date.day() as i32;
+    let year = date.year() as i64;
+    let month = date.month() as i64;
+    let day = date.day() as i64;
 
     Ok(year * 10000 + month * 100 + day)
 }
@@ -279,6 +279,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore = "network call to eastmoney"]
     async fn test_crawl_kline_eastmoney() {
         // 105.TSLA 20110126 - 20110202 1D
         let url = "https://54.push2his.eastmoney.com/api/qt/stock/kline/get?cb=jQuery35106707668456928451_1695010059469&secid=105.TSLA&ut=fa5fd1943c7b386f172d6893dbfba10b&fields1=f1%2Cf2%2Cf3%2Cf4%2Cf5%2Cf6&fields2=f51%2Cf52%2Cf53%2Cf54%2Cf55%2Cf56%2Cf57%2Cf58%2Cf59%2Cf60%2Cf61&klt=101&fqt=1&beg=0&end=20110202&lmt=1200&_=1695010059524";

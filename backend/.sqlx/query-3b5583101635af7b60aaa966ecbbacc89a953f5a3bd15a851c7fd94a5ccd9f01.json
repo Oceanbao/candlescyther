@@ -1,0 +1,62 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT * FROM klines WHERE k_ticker = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "k_ticker",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "k_date",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "k_open",
+        "ordinal": 2,
+        "type_info": "Float"
+      },
+      {
+        "name": "k_high",
+        "ordinal": 3,
+        "type_info": "Float"
+      },
+      {
+        "name": "k_low",
+        "ordinal": 4,
+        "type_info": "Float"
+      },
+      {
+        "name": "k_close",
+        "ordinal": 5,
+        "type_info": "Float"
+      },
+      {
+        "name": "k_volume",
+        "ordinal": 6,
+        "type_info": "Float"
+      },
+      {
+        "name": "k_value",
+        "ordinal": 7,
+        "type_info": "Float"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "3b5583101635af7b60aaa966ecbbacc89a953f5a3bd15a851c7fd94a5ccd9f01"
+}

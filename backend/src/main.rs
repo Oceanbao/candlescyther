@@ -16,6 +16,21 @@ async fn main() -> anyhow::Result<()> {
 
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
 
+    // FIX: clean up
+    let db_filepath = "./db/database.db";
+    match env::var("RESET_DB") {
+        Ok(_) => {
+            // Delete the existing database file
+            if std::path::Path::new(db_filepath).exists() {
+                std::fs::remove_file(db_filepath)?;
+                info!("Deleted existing database file: {}", db_filepath);
+            }
+        }
+        Err(_) => {
+            info!("RESET_DB is not set.");
+        }
+    }
+
     match sqlx::Sqlite::database_exists(&database_url).await {
         Ok(exist) => {
             if !exist {
@@ -39,11 +54,13 @@ async fn main() -> anyhow::Result<()> {
 
     sqlx::migrate!("./migrations").run(&pool).await?;
 
-    if let Err(e) = sqlx::query("INSERT INTO user (user_name, user_role) VALUES (?, ?)")
-        .bind("ocean")
-        .bind("admin")
-        .execute(&pool)
-        .await
+    if let Err(e) = sqlx::query!(
+        "INSERT INTO users (user_name, user_role) VALUES (?, ?)",
+        "ocean",
+        "admin"
+    )
+    .execute(&pool)
+    .await
     {
         tracing::error!("Failed to insert ocean user: {}", e);
     }

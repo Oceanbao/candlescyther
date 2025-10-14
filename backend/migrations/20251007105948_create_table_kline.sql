@@ -1,5 +1,5 @@
 -- Add migration script here
-CREATE TABLE kline (
+CREATE TABLE klines (
     k_ticker TEXT NOT NULL,
     k_date INTEGER NOT NULL,
     k_open REAL NOT NULL,
@@ -12,6 +12,6 @@ CREATE TABLE kline (
 );
 
 -- Essential indexes for common query patterns
-CREATE INDEX idx_kline_ticker_date ON kline (k_ticker, k_date);
-CREATE INDEX idx_kline_date ON kline (k_date);
-CREATE INDEX idx_kline_ticker ON kline (k_ticker);
+CREATE INDEX idx_klines_ticker_date ON klines (k_ticker, k_date);
+CREATE INDEX idx_klines_date ON klines (k_date);
+CREATE INDEX idx_klines_ticker ON klines (k_ticker);

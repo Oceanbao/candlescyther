@@ -8,3 +8,6 @@ CREATE TABLE jobs (
     updated_at TEXT NOT NULL,
     error_message TEXT
 );
+
+-- Essential indexes for common query patterns
+CREATE INDEX idx_jobs_created_at ON jobs (created_at);
