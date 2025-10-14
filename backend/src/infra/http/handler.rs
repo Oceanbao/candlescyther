@@ -30,12 +30,12 @@ pub fn create_routes(app_state: AppState) -> OpenApiRouter {
         .routes(routes!(list_jobs))
         // /signals
         .routes(routes!(list_signals))
-        // /crawl
+        // /crawl?tickers=a,b,c
         .routes(routes!(crawl_klines))
+        // /klines?ticker=a
+        .routes(routes!(list_klines))
         // /run/signals
         .routes(routes!(compute_signals))
-        // /klines
-        .routes(routes!(list_klines))
         .with_state(app_state)
 }
 
