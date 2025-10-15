@@ -31,14 +31,16 @@
 		</Sidebar.Menu>
 		<Sidebar.Menu>
 			{#each items as item (item.title)}
-				<Sidebar.MenuItem>
-					<Sidebar.MenuButton tooltipContent={item.title}>
-						{#if item.icon}
-							<item.icon />
-						{/if}
-						<span>{item.title}</span>
-					</Sidebar.MenuButton>
-				</Sidebar.MenuItem>
+				<a href={item.url}>
+					<Sidebar.MenuItem>
+						<Sidebar.MenuButton tooltipContent={item.title}>
+							{#if item.icon}
+								<item.icon />
+							{/if}
+							<span>{item.title}</span>
+						</Sidebar.MenuButton>
+					</Sidebar.MenuItem>
+				</a>
 			{/each}
 		</Sidebar.Menu>
 	</Sidebar.GroupContent>
