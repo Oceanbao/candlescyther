@@ -1,0 +1,394 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "backend",
+    "description": "",
+    "license": {
+      "name": ""
+    },
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/crawl": {
+      "get": {
+        "tags": [
+          "candlescyther"
+        ],
+        "summary": "Crawl all tickers for klines.",
+        "description": "Returns a 200 if the job is submitted.",
+        "operationId": "crawl_klines",
+        "parameters": [
+          {
+            "name": "tickers",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Job submitted"
+          },
+          "400": {
+            "description": "Tickers is required",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "500": {
+            "description": "Job runner error",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/jobs": {
+      "get": {
+        "tags": [
+          "candlescyther"
+        ],
+        "summary": "List all jobs.",
+        "description": "Returns all jobs.",
+        "operationId": "list_jobs",
+        "responses": {
+          "200": {
+            "description": "List all jobs from jobs table.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Job"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Database error",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/klines": {
+      "get": {
+        "tags": [
+          "candlescyther"
+        ],
+        "summary": "List all klines per ticker.",
+        "description": "Returns all klines for give ticker.",
+        "operationId": "list_klines",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List all klines for the ticker",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Kline"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Ticker is required",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "500": {
+            "description": "Database error",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/logs": {
+      "get": {
+        "tags": [
+          "candlescyther"
+        ],
+        "summary": "List all logs",
+        "description": "Default 100 records.",
+        "operationId": "list_logs",
+        "responses": {
+          "200": {
+            "description": "List all logs from logs table.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LogEntry"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Database error",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/run/signals": {
+      "get": {
+        "tags": [
+          "candlescyther"
+        ],
+        "summary": "Trigger compute signals job.",
+        "description": "Returns OK if job submitted.",
+        "operationId": "compute_signals",
+        "responses": {
+          "200": {
+            "description": "Job submitted"
+          },
+          "500": {
+            "description": "Job runner error",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/signals": {
+      "get": {
+        "tags": [
+          "candlescyther"
+        ],
+        "summary": "List all signals.",
+        "description": "Returns all signals.",
+        "operationId": "list_signals",
+        "responses": {
+          "200": {
+            "description": "List all signals from signals table.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Signal"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Database error",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Job": {
+        "type": "object",
+        "required": [
+          "id",
+          "job_status",
+          "job_type",
+          "payload",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string"
+          },
+          "error_message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "job_status": {
+            "$ref": "#/components/schemas/JobStatus"
+          },
+          "job_type": {
+            "$ref": "#/components/schemas/JobType"
+          },
+          "payload": {},
+          "updated_at": {
+            "type": "string"
+          }
+        }
+      },
+      "JobStatus": {
+        "type": "string",
+        "enum": [
+          "Pending",
+          "Running",
+          "Done",
+          "Error"
+        ]
+      },
+      "JobType": {
+        "type": "string",
+        "enum": [
+          "CrawlPrice",
+          "CrawlTest",
+          "ComputeSignal"
+        ]
+      },
+      "Kline": {
+        "type": "object",
+        "required": [
+          "k_ticker",
+          "k_date",
+          "k_open",
+          "k_high",
+          "k_low",
+          "k_close",
+          "k_volume",
+          "k_value"
+        ],
+        "properties": {
+          "k_close": {
+            "type": "number",
+            "format": "double"
+          },
+          "k_date": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "k_high": {
+            "type": "number",
+            "format": "double"
+          },
+          "k_low": {
+            "type": "number",
+            "format": "double"
+          },
+          "k_open": {
+            "type": "number",
+            "format": "double"
+          },
+          "k_ticker": {
+            "type": "string"
+          },
+          "k_value": {
+            "type": "number",
+            "format": "double"
+          },
+          "k_volume": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "LogEntry": {
+        "type": "object",
+        "required": [
+          "id",
+          "log_timestamp",
+          "log_level",
+          "log_target",
+          "log_message",
+          "log_line"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "log_level": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "log_line": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "log_message": {
+            "type": "string"
+          },
+          "log_target": {
+            "type": "string"
+          },
+          "log_timestamp": {
+            "type": "string"
+          }
+        }
+      },
+      "Signal": {
+        "type": "object",
+        "required": [
+          "ticker",
+          "kdj_k",
+          "kdj_d"
+        ],
+        "properties": {
+          "kdj_d": {
+            "type": "number",
+            "format": "double"
+          },
+          "kdj_k": {
+            "type": "number",
+            "format": "double"
+          },
+          "ticker": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "candlescyther",
+      "description": "Reap fat candles."
+    }
+  ]
+}

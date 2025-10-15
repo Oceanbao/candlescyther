@@ -101,13 +101,13 @@
 <div>
 	<div class="flex items-center py-4">
 		<Input
-			placeholder="Filter emails..."
-			value={(table.getColumn('email')?.getFilterValue() as string) ?? ''}
+			placeholder="Filter ticker..."
+			value={(table.getColumn('ticker')?.getFilterValue() as string) ?? ''}
 			onchange={(e) => {
-				table.getColumn('email')?.setFilterValue(e.currentTarget.value);
+				table.getColumn('ticker')?.setFilterValue(e.currentTarget.value);
 			}}
 			oninput={(e) => {
-				table.getColumn('email')?.setFilterValue(e.currentTarget.value);
+				table.getColumn('ticker')?.setFilterValue(e.currentTarget.value);
 			}}
 			class="max-w-sm"
 		/>

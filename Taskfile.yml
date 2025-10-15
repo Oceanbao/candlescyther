@@ -7,6 +7,12 @@ tasks:
     cmds:
       - echo -n 'Are you sure? [y/N] ' && read ans && [ ${ans:-N} = y ]
 
+  openapi:
+    cmds:
+      - cd backend && cargo b && cd ..
+      - mv backend/openapi.json frontend/
+      - cd frontend && bun openapi-typescript ./openapi.json -o ./src/lib/server/api.d.ts
+
   # main:
   #   desc: Run full build process.
   #   cmds:

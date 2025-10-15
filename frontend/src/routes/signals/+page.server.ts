@@ -1,9 +1,9 @@
 import { server } from '$lib/server/client';
 
 export async function load() {
-	const { data, error } = await server.GET('/api/jobs', {});
+	const { data, error } = await server.GET('/api/signals', {});
 
 	return {
-		jobs: data ?? []
+		signals: data ?? []
 	};
 }

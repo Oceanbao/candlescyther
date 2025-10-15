@@ -7,6 +7,6 @@
 </script>
 
 <Button {variant} {...restProps}>
-	Email
+	D
 	<ArrowUpDownIcon class="ml-2" />
 </Button>

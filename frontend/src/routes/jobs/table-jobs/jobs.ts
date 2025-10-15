@@ -2,8 +2,9 @@ import { renderComponent, renderSnippet } from '$lib/components/ui/data-table';
 import type { ColumnDef } from '@tanstack/table-core';
 import { createRawSnippet } from 'svelte';
 import DataTableActions from './data-table-actions.svelte';
-import DataTableEmailButton from './data-table-email-button.svelte';
+import DataTableSortButton from './data-table-sort-button.svelte';
 import { Checkbox } from '$lib/components/ui/checkbox/index.js';
+import type { TJobs } from '$lib/server/client';
 
 // This type is used to define the shape of data.
 // Columns are where you define the core of what your table will look like.
@@ -16,40 +17,107 @@ export type Payment = {
 	email: string;
 };
 
-export const columns: ColumnDef<Payment>[] = [
+export const columns: ColumnDef<TJobs>[] = [
 	{
-		accessorKey: 'amount',
+		accessorKey: 'job_status',
 		header: () => {
-			const amountHeaderSnippet = createRawSnippet(() => ({
-				render: () => `<div class="text-right">Amount</div>`
+			const headerSnippet = createRawSnippet(() => ({
+				render: () => `<div class="text-center">Job Status</div>`
 			}));
-			return renderSnippet(amountHeaderSnippet);
+			return renderSnippet(headerSnippet);
 		},
 		cell: ({ row }) => {
-			const formatter = new Intl.NumberFormat('en-US', {
-				style: 'currency',
-				currency: 'USD'
-			});
+			// const formatter = new Intl.NumberFormat('en-US', {
+			// 	style: 'currency',
+			// 	currency: 'USD'
+			// });
 
-			const amountCellSnippet = createRawSnippet<[{ amount: number }]>((getAmount) => {
-				const { amount } = getAmount();
-				const formatted = formatter.format(amount);
+			const cellSnippet = createRawSnippet<[{ job_status: string }]>((getData) => {
+				const { job_status } = getData();
+				// const formatted = formatter.format(amount);
 				return {
-					render: () => `<div class="text-right font-medium">${formatted}</div>`
+					render: () => `<div class="text-right font-medium">${job_status}</div>`
 				};
 			});
 
-			return renderSnippet(amountCellSnippet, {
-				amount: row.original.amount
+			return renderSnippet(cellSnippet, {
+				job_status: row.original.job_status
 			});
 		}
 	},
 	{
-		accessorKey: 'email',
+		accessorKey: 'job_type',
+		header: () => {
+			const headerSnippet = createRawSnippet(() => ({
+				render: () => `<div class="text-center">Job Type</div>`
+			}));
+			return renderSnippet(headerSnippet);
+		},
+		cell: ({ row }) => {
+			// const formatter = new Intl.NumberFormat('en-US', {
+			// 	style: 'currency',
+			// 	currency: 'USD'
+			// });
+
+			const cellSnippet = createRawSnippet<[{ job_type: string }]>((getData) => {
+				const { job_type } = getData();
+				// const formatted = formatter.format(amount);
+				return {
+					render: () => `<div class="text-right font-medium">${job_type}</div>`
+				};
+			});
+
+			return renderSnippet(cellSnippet, {
+				job_type: row.original.job_type
+			});
+		}
+	},
+	{
+		accessorKey: 'payload',
+		header: () => {
+			const amountHeaderSnippet = createRawSnippet(() => ({
+				render: () => `<div class="text-center">Payload</div>`
+			}));
+			return renderSnippet(amountHeaderSnippet);
+		},
+		cell: ({ row }) => {
+			// const formatter = new Intl.NumberFormat('en-US', {
+			// 	style: 'currency',
+			// 	currency: 'USD'
+			// });
+
+			const payloadCellSnippet = createRawSnippet<[{ payload: string }]>((getPayload) => {
+				const { payload } = getPayload();
+				// const formatted = formatter.format(amount);
+				return {
+					render: () => `<div class="text-right font-medium">${JSON.stringify(payload)}</div>`
+				};
+			});
+
+			return renderSnippet(payloadCellSnippet, {
+				payload: row.original.payload as string
+			});
+		}
+	},
+	{
+		accessorKey: 'created_at',
 		header: ({ column }) =>
-			renderComponent(DataTableEmailButton, {
+			renderComponent(DataTableSortButton, {
+				style: 'text-align: center; width: 100%; height: 100%;',
 				onclick: column.getToggleSortingHandler()
-			})
+			}),
+		cell: ({ row }) => {
+			const createdCellSnippet = createRawSnippet<[{ created_at: string }]>((getCreated) => {
+				const { created_at } = getCreated();
+				return {
+					render: () => `<div class="text-center">${created_at}</div>`
+				};
+			});
+
+			return renderSnippet(createdCellSnippet, {
+				created_at: row.original.created_at
+			});
+		}
 	},
 	{
 		id: 'actions',
@@ -57,7 +125,7 @@ export const columns: ColumnDef<Payment>[] = [
 		// Use this to handle actions for your row eg. use the id to make a DELETE call to your API.
 		cell: ({ row }) => {
 			// You can pass whatever you need from `row.original` to the component
-			return renderComponent(DataTableActions, { id: row.original.id });
+			return renderComponent(DataTableActions, { id: `${row.original.id}` });
 		}
 	},
 	{

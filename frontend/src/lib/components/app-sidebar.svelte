@@ -11,7 +11,8 @@
 	import ReportIcon from '@tabler/icons-svelte/icons/report';
 	import SearchIcon from '@tabler/icons-svelte/icons/search';
 	import SettingsIcon from '@tabler/icons-svelte/icons/settings';
-	import UsersIcon from '@tabler/icons-svelte/icons/users';
+	// import UsersIcon from '@tabler/icons-svelte/icons/users';
+	import { IconLogs } from '@tabler/icons-svelte';
 	import NavDocuments from './nav-documents.svelte';
 	import NavMain from './nav-main.svelte';
 	import NavSecondary from './nav-secondary.svelte';
@@ -37,19 +38,19 @@
 				icon: ListDetailsIcon
 			},
 			{
-				title: 'Analytics',
-				url: '#',
+				title: 'Signals',
+				url: '/signals',
 				icon: ChartBarIcon
 			},
 			{
-				title: 'Projects',
-				url: '#',
+				title: 'Jobs',
+				url: '/jobs',
 				icon: FolderIcon
 			},
 			{
-				title: 'Team',
+				title: 'Logs',
 				url: '#',
-				icon: UsersIcon
+				icon: IconLogs
 			}
 		],
 		navSecondary: [

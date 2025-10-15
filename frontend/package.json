@@ -39,6 +39,7 @@
 		"eslint-plugin-svelte": "^3.0.0",
 		"globals": "^16.0.0",
 		"layerchart": "^2.0.0-next.40",
+		"openapi-typescript": "^7.10.0",
 		"prettier": "^3.4.2",
 		"prettier-plugin-svelte": "^3.3.3",
 		"prettier-plugin-tailwindcss": "^0.6.11",
@@ -56,6 +57,7 @@
 		"zod": "^3.25.64"
 	},
 	"dependencies": {
-		"bits-ui": "^2.11.4"
+		"bits-ui": "^2.11.4",
+		"openapi-fetch": "^0.15.0"
 	}
 }

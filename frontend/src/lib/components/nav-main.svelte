@@ -4,8 +4,14 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import type { Icon } from '@tabler/icons-svelte';
+	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
+	import FolderIcon from '@tabler/icons-svelte/icons/folder';
+	import Share3Icon from '@tabler/icons-svelte/icons/share-3';
+	import TrashIcon from '@tabler/icons-svelte/icons/trash';
 
 	let { items }: { items: { title: string; url: string; icon?: Icon }[] } = $props();
+
+	const sidebar = Sidebar.useSidebar();
 </script>
 
 <Sidebar.Group>
@@ -19,14 +25,47 @@
 					<CirclePlusFilledIcon />
 					<span>Quick Create</span>
 				</Sidebar.MenuButton>
-				<Button
-					size="icon"
-					class="size-8 group-data-[collapsible=icon]:opacity-0"
-					variant="outline"
-				>
-					<MailIcon />
-					<span class="sr-only">Inbox</span>
-				</Button>
+				<DropdownMenu.Root>
+					<DropdownMenu.Trigger>
+						{#snippet child({ props })}
+							<Sidebar.MenuAction
+								{...props}
+								showOnHover
+								class="rounded-sm data-[state=open]:bg-accent"
+							>
+								<MailIcon />
+								<span class="sr-only">More</span>
+							</Sidebar.MenuAction>
+						{/snippet}
+					</DropdownMenu.Trigger>
+					<DropdownMenu.Content
+						class="w-24 rounded-lg"
+						side={sidebar.isMobile ? 'bottom' : 'right'}
+						align={sidebar.isMobile ? 'end' : 'start'}
+					>
+						<DropdownMenu.Item>
+							<FolderIcon />
+							<span>Open</span>
+						</DropdownMenu.Item>
+						<DropdownMenu.Item>
+							<Share3Icon />
+							<span>Share</span>
+						</DropdownMenu.Item>
+						<DropdownMenu.Separator />
+						<DropdownMenu.Item variant="destructive">
+							<TrashIcon />
+							<span>Delete</span>
+						</DropdownMenu.Item>
+					</DropdownMenu.Content>
+				</DropdownMenu.Root>
+				<!-- <Button -->
+				<!-- 	size="icon" -->
+				<!-- 	class="size-8 group-data-[collapsible=icon]:opacity-0" -->
+				<!-- 	variant="outline" -->
+				<!-- > -->
+				<!-- 	<MailIcon /> -->
+				<!-- 	<span class="sr-only">Inbox</span> -->
+				<!-- </Button> -->
 			</Sidebar.MenuItem>
 		</Sidebar.Menu>
 		<Sidebar.Menu>
