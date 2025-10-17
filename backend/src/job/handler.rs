@@ -9,7 +9,7 @@ use crate::{
         model::{Kline, Signal},
         signal::compute_kdj,
     },
-    infra::{data::crawler::crawl_kline_eastmoney, storage::sqlite::insert_klines},
+    infra::{data::kline::crawl_kline_eastmoney, storage::sqlite::insert_klines},
     job::model::{Job, JobError, JobResult, JobType},
 };
 

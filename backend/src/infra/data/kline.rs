@@ -1,8 +1,10 @@
-use anyhow::bail;
 use chrono::{Datelike, NaiveDate};
 use serde::{Deserialize, Serialize};
 
-use crate::domain::model::Kline;
+use crate::{
+    domain::model::Kline,
+    infra::data::service::{parse_raw_eastmoney, url2text},
+};
 
 // crawl_kline_eastmoney(url) -> Result<Vec<Kline>, Error>
 // url2text(url) -> raw
@@ -11,28 +13,11 @@ use crate::domain::model::Kline;
 // create_kline_eastmoney(RawPriceEastmoney) -> Vec<Kline>
 pub async fn crawl_kline_eastmoney(url: &str) -> Result<Vec<Kline>, anyhow::Error> {
     let raw = url2text(url).await?;
-    let raw_price = parse_raw_price_eastmoney(&raw);
-    if raw_price.is_none() {
-        bail!("Failed to parse the correct RawPriceEastmoney")
-    }
-    let klines = create_kline_eastmoney(raw_price.unwrap())?;
+    let raw_price: Result<RawPriceEastmoney, _> = parse_raw_eastmoney(&raw);
 
-    Ok(klines)
-}
-
-// url2text GET url and returns text results.
-async fn url2text(url: &str) -> Result<String, anyhow::Error> {
-    match ureq::get(url).call() {
-        Ok(mut resp) => {
-            let text = resp.body_mut().read_to_string()?;
-            Ok(text)
-        }
-        Err(ureq::Error::StatusCode(code)) => {
-            anyhow::bail!("HTTP error: {code}",)
-        }
-        Err(e) => {
-            anyhow::bail!("Non-HTTP error: {e}",)
-        }
+    match raw_price {
+        Ok(res) => create_kline_eastmoney(res),
+        Err(e) => anyhow::bail!(e.to_string()),
     }
 }
 
@@ -50,24 +35,6 @@ struct RawPriceEastmoneyData {
     pub market: i32,
     #[serde(rename = "klines")]
     pub klines: Vec<String>,
-}
-
-pub fn parse_raw_price_eastmoney(raw: &str) -> Option<RawPriceEastmoney> {
-    let mut start_index = raw.find('(')?;
-    start_index += 1;
-    let end_index = raw.find(')')?;
-
-    let parsed = String::from(&raw[start_index..end_index]);
-
-    let result: Result<RawPriceEastmoney, serde_json::Error> = serde_json::from_str(&parsed);
-
-    match result {
-        Ok(res) => Some(res),
-        Err(e) => {
-            tracing::error!("Failed to parse_raw_price_eastmoney {e:#?}");
-            None
-        }
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -166,9 +133,9 @@ fn date_string_to_i32(date_str: &str) -> Result<i64, anyhow::Error> {
 
 #[cfg(test)]
 mod tests {
-    use crate::infra::data::crawler::{
+    use crate::infra::data::kline::{
         RawPriceEastmoney, RawPriceEastmoneyData, crawl_kline_eastmoney, create_kline_eastmoney,
-        parse_kline_eastmoney, parse_raw_price_eastmoney, url2text,
+        parse_kline_eastmoney, parse_raw_eastmoney,
     };
 
     const DEMO_PRICE_EASTMONEY_GOOD: &str = r#"jQuery35105424247560587396_1758630789935({"rc":0,"rt":17,"svr":177617930,"lt":2,"full":0,"dlmkts":"","data":{"code":"APP","market":105,"name":"Applovin Corp-A","decimal":3,"dktotal":1125,"preKPrice":80.0,"klines":["2021-04-16,70.000,61.000,71.510,58.650,15643711,1034038718.000,16.08,-23.75,-19.000,4.37","2021-04-23,60.000,58.500,62.950,55.705,13380547,802760598.000,11.88,-4.10,-2.500,3.74","2021-04-30,58.770,58.010,61.110,57.650,2313034,136641797.000,5.91,-0.84,-0.490,0.65","2021-05-07,58.530,57.260,60.410,54.720,3922270,226305381.000,9.81,-1.29,-0.750,1.10","2021-05-14,59.210,57.260,59.210,49.410,7027414,375163594.000,17.11,0.00,0.000,1.93","2021-05-21,56.170,68.350,70.170,55.825,4603785,298832284.000,25.05,19.37,11.090,1.26"]}});"#;
@@ -177,54 +144,10 @@ mod tests {
         "2021-04-16,70.000,61.000,71.510,58.650,15643711,1034038718.000,16.08,-23.75,-19.000,4.37";
     const DEMO_KLINE_EASTMONEY_BAD: &str =
         "2021-04-1670.000,61.000,71.510,58.650,15643711,1034038718.000,16.08,-23.75,-19.000,4.37";
-    // const DEMO_META_EASTMONEY_GOOD: &str = r#"jQuery35105571137681219451_1708499614785({"rc":0,"rt":4,"svr":177622158,"lt":2,"full":1,"dlmkts":"8,10,128","data":{"f55":1.768942283,"f57":"TSLA","f58":"特斯拉","f59":3,"f62":2,"f84":3325150886.0,"f85":3325150886.0,"f92":23.2512757,"f105":0.0,"f107":105,"f116":1473208100042.3,"f117":1473208100042.3,"f152":2,"f162":"-","f167":1905,"f173":2.1,"f183":41831000000.0,"f184":0.0,"f185":0.0,"f186":0.0,"f187":0.0,"f188":0.392752417028,"f189":20100629,"f190":0.0}});"#;
-    // const DEMO_META_EASTMONEY_BAD: &str = r#"jQuery35105571137681219451_1708499614785("rc":0,"rt":4,"svr":177622158,"lt":2,"full":1,"dlmkts":"8,10,128","data":{"f55":1.768942283,"f57":"TSLA","f58":"特斯拉","f59":3,"f62":2,"f84":3325150886.0,"f85":3325150886.0,"f92":23.2512757,"f105":0.0,"f107":105,"f116":1473208100042.3,"f117":1473208100042.3,"f152":2,"f162":"-","f167":1905,"f173":2.1,"f183":41831000000.0,"f184":0.0,"f185":0.0,"f186":0.0,"f187":0.0,"f188":0.392752417028,"f189":20100629,"f190":0.0}});"#;
-
-    #[tokio::test]
-    async fn test_url2text() {
-        let url = "https://dummyjson.com/test";
-        let text = url2text(url).await;
-
-        match text {
-            Ok(txt) => {
-                assert_eq!(txt, "{\"status\":\"ok\",\"method\":\"GET\"}");
-            }
-            Err(e) => {
-                panic!("Expected Ok, but got err: {e:?}");
-            }
-        }
-
-        let url = "https://dummyjson.com/http/404/bad";
-        let text = url2text(url).await;
-
-        match text {
-            Ok(txt) => {
-                panic!("Expected Err, but got Ok: {txt:?}");
-            }
-            Err(e) => {
-                assert_eq!(e.to_string(), "HTTP error: 404");
-            }
-        }
-
-        let url = "https://dummyjso.com/http/404/bad";
-        let text = url2text(url).await;
-
-        match text {
-            Ok(txt) => {
-                panic!("Expected Err, but got Ok: {txt:?}");
-            }
-            Err(e) => {
-                assert_eq!(
-                    e.to_string(),
-                    "Non-HTTP error: io: failed to lookup address information: nodename nor servname provided, or not known"
-                );
-            }
-        }
-    }
 
     #[test]
     fn test_parse_price_eastmoney() {
-        let result = parse_raw_price_eastmoney(DEMO_PRICE_EASTMONEY_GOOD);
+        let result: Result<RawPriceEastmoney, _> = parse_raw_eastmoney(DEMO_PRICE_EASTMONEY_GOOD);
 
         let expect = RawPriceEastmoney {
             data: RawPriceEastmoneyData {
@@ -241,12 +164,12 @@ mod tests {
             },
         };
 
-        assert!(result.is_some());
+        assert!(result.is_ok());
         assert_eq!(result.unwrap().data, expect.data);
 
-        let result = parse_raw_price_eastmoney(DEMO_PRICE_EASTMONEY_BAD);
+        let result: Result<RawPriceEastmoney, _> = parse_raw_eastmoney(DEMO_PRICE_EASTMONEY_BAD);
 
-        assert!(result.is_none());
+        assert!(result.is_err());
     }
 
     #[test]
@@ -265,9 +188,10 @@ mod tests {
 
     #[test]
     fn test_create_kline_eastmoney() {
-        let price_eastmoney = parse_raw_price_eastmoney(DEMO_PRICE_EASTMONEY_GOOD).unwrap();
+        let price_eastmoney: Result<RawPriceEastmoney, _> =
+            parse_raw_eastmoney(DEMO_PRICE_EASTMONEY_GOOD);
 
-        let result = create_kline_eastmoney(price_eastmoney);
+        let result = create_kline_eastmoney(price_eastmoney.unwrap());
 
         assert!(result.is_ok());
 

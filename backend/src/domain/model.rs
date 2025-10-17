@@ -2,9 +2,18 @@ use serde::{Deserialize, Serialize};
 use sqlx::prelude::FromRow;
 use utoipa::ToSchema;
 
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
 pub struct Stock {
     pub ticker: String,
+    pub realname: String,
+    pub market: i64,
+    pub total_cap: Option<f64>,
+    pub pe: Option<f64>,
+    pub pb: Option<f64>,
+    pub revenue: Option<f64>,
+    pub net: Option<f64>,
+    pub margin: Option<f64>,
+    pub debt: Option<f64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]

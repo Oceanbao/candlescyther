@@ -57,34 +57,40 @@ pub async fn insert_klines(pool: &Pool<Sqlite>, klines: Vec<Kline>) -> Result<()
     }
 
     // FIX: remove this when stock crawl is done.
-    let mut tx = pool.begin().await?;
-    for ticker in &tickers {
-        match sqlx::query!(
-            "INSERT INTO stocks (ticker) 
-                 VALUES (?)",
-            ticker,
-        )
-        .execute(&mut *tx)
-        .await
-        {
-            Ok(_) => {}
-            Err(e) => match e {
-                sqlx::Error::Database(e) => {
-                    let msg = e.message();
-                    if e.code().unwrap_or_default() == "1555" && msg.contains("UNIQUE constraint") {
-                        tracing::debug!("Ticker already exists.")
-                    }
-                }
-                _ => {
-                    tracing::debug!("Failed to write to `stocks`: {}", e.to_string());
-                }
-            },
-        }
-    }
-    tx.commit().await?;
+    // let mut tx = pool.begin().await?;
+    // for ticker in &tickers {
+    //     match sqlx::query!(
+    //         "INSERT INTO stocks (ticker)
+    //              VALUES (?)",
+    //         ticker,
+    //     )
+    //     .execute(&mut *tx)
+    //     .await
+    //     {
+    //         Ok(_) => {}
+    //         Err(e) => match e {
+    //             sqlx::Error::Database(e) => {
+    //                 let msg = e.message();
+    //                 if e.code().unwrap_or_default() == "1555" && msg.contains("UNIQUE constraint") {
+    //                     tracing::debug!("Ticker already exists.")
+    //                 }
+    //             }
+    //             _ => {
+    //                 tracing::debug!("Failed to write to `stocks`: {}", e.to_string());
+    //             }
+    //         },
+    //     }
+    // }
+    // tx.commit().await?;
 
     Ok(())
 }
+
+// TODO: This is specific to stock insert with elaborate steps.
+// May want to split and redesign.
+// pub async fn insert_klines(pool: &Pool<Sqlite>, klines: Vec<Stock>) -> Result<(), sqlx::Error> {
+//     todo!()
+// }
 
 #[cfg(test)]
 mod tests {
