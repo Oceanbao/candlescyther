@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT * FROM klines WHERE k_ticker = ?",
+  "query": "SELECT * FROM klines WHERE k_ticker = ? ORDER BY k_date ASC",
   "describe": {
     "columns": [
       {
@@ -58,5 +58,5 @@
       false
     ]
   },
-  "hash": "3b5583101635af7b60aaa966ecbbacc89a953f5a3bd15a851c7fd94a5ccd9f01"
+  "hash": "389c4dba2e5c778fb6bd858a4725ff885671bf3481417cbf0f7df031b0311eeb"
 }

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO signals (ticker, kdj_k, kdj_d) VALUES (?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "1069c32706fa6d6715411b02160c6d090050d7cf3db1c8770cb3be4cd7bdf106"
+}

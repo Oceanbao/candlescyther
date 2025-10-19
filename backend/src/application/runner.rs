@@ -1,16 +1,23 @@
 use std::sync::Arc;
+use tracing::debug;
 
 use tokio::sync::Semaphore;
 
-use crate::job::{
-    handler::JobHandlerRegistry,
-    model::{Job, JobStatus},
-    repository::JobRepository,
+use crate::{
+    application::{
+        handlers::JobHandlerRegistry,
+        model::{Job, JobStatus},
+        repository::JobRepository,
+    },
+    domain::repository::DomainRepository,
 };
 
+/// Main engine of the application that drives query/command.
+/// Its states include repositories of all domains, registry, config.
 #[derive(Clone)]
 pub struct JobRunner {
-    pub repository: Arc<dyn JobRepository>,
+    pub repo_domain: Arc<dyn DomainRepository>,
+    pub repo_job: Arc<dyn JobRepository>,
     handler_registry: Arc<JobHandlerRegistry>,
     concurrency_limit: Arc<Semaphore>,
     wait_ms: usize,
@@ -23,18 +30,22 @@ pub enum RunnerError {
     Database(#[from] sqlx::Error),
     #[error("Job execution error: {message}")]
     Execution { job_id: i64, message: String },
+    #[error(transparent)]
+    Unknown(#[from] anyhow::Error),
 }
 
 impl JobRunner {
     pub fn new(
-        repository: Arc<dyn JobRepository>,
+        repo_domain: Arc<dyn DomainRepository>,
+        repo_job: Arc<dyn JobRepository>,
         handler_registry: Arc<JobHandlerRegistry>,
         max_concurrent_jobs: usize,
         wait_ms: usize,
         batch_size: usize,
     ) -> Self {
         Self {
-            repository,
+            repo_domain,
+            repo_job,
             handler_registry,
             concurrency_limit: Arc::new(Semaphore::new(max_concurrent_jobs)),
             wait_ms,
@@ -50,14 +61,15 @@ impl JobRunner {
         ));
 
         loop {
-            println!("------- run loop -------");
+            debug!("------- run loop -------");
 
             timer.tick().await;
 
             // FIXME: refine the num jobs each loop gets
-            // NOTE: this is diff the `concurrency_limit`
-            let pending_jobs = self.repository.get_pending_jobs(self.batch_size).await?;
+            // NOTE: this != `concurrency_limit`
+            let pending_jobs = self.repo_job.get_pending_jobs(self.batch_size).await?;
 
+            // FIX: possible refine
             if pending_jobs.is_empty() {
                 return Ok(());
                 // continue
@@ -66,7 +78,7 @@ impl JobRunner {
             let mut handles = Vec::new();
 
             for job in pending_jobs {
-                println!("-- job: {:#?} --", job.job_type);
+                debug!("== job: {:#?} ==", job.job_type);
 
                 let permit = self
                     .concurrency_limit
@@ -74,11 +86,11 @@ impl JobRunner {
                     .acquire_owned()
                     .await
                     .unwrap();
-                let repository = self.repository.clone();
-                let handler_registry = self.handler_registry.clone();
+
+                let runner = self.clone();
 
                 let handle = tokio::spawn(async move {
-                    let result = Self::process_job(job, repository, handler_registry).await;
+                    let result = runner.process_job(job).await;
                     drop(permit); // Release the semaphore permit
                     result
                 });
@@ -86,6 +98,7 @@ impl JobRunner {
                 handles.push(handle);
             }
 
+            // FIX: refine error management
             // Wait for all jobs in this batch to complete
             for handle in handles {
                 match handle.await {
@@ -93,40 +106,39 @@ impl JobRunner {
                         if let Err(e) = a {
                             match e {
                                 RunnerError::Execution { job_id, message } => {
-                                    self.repository
+                                    self.repo_job
                                         .update_job_status(job_id, JobStatus::Error, Some(message))
                                         .await?;
                                 }
                                 RunnerError::Database(e) => {
-                                    eprintln!("{e}");
+                                    tracing::error!("{e}");
+                                }
+                                RunnerError::Unknown(e) => {
+                                    tracing::error!("{e}");
                                 }
                             }
                         }
                     }
                     Err(join_err) => {
-                        eprintln!("Log this join handler error {join_err}");
+                        tracing::error!("Log this join handler error {join_err}");
                     }
                 }
             }
         }
     }
 
-    async fn process_job(
-        job: Job,
-        repository: Arc<dyn JobRepository>,
-        handler_registry: Arc<JobHandlerRegistry>,
-    ) -> Result<(), RunnerError> {
+    async fn process_job(&self, job: Job) -> Result<(), RunnerError> {
         // Mark job as running
-        repository.mark_job_running(job.id).await?;
+        self.repo_job.mark_job_running(job.id).await?;
 
         // Find appropriate handler
-        let handler =
-            handler_registry
-                .get_handler(&job.job_type)
-                .ok_or_else(|| RunnerError::Execution {
-                    job_id: job.id,
-                    message: format!("No handler for job type: {:?}", job.job_type),
-                })?;
+        let handler = self
+            .handler_registry
+            .get_handler(&job.job_type)
+            .ok_or_else(|| RunnerError::Execution {
+                job_id: job.id,
+                message: format!("No handler for job type: {:?}", job.job_type),
+            })?;
 
         // Execute the job
         // FIXME: refine the logic in error
@@ -134,9 +146,9 @@ impl JobRunner {
             // Job result
             Ok(result) => {
                 if result.success {
-                    repository.mark_job_done(job.id, result.output).await?;
+                    self.repo_job.mark_job_done(job.id, result.output).await?;
                 } else {
-                    repository
+                    self.repo_job
                         .update_job_status(job.id, JobStatus::Error, result.error)
                         .await?;
                 }
@@ -144,7 +156,7 @@ impl JobRunner {
             }
             // Job error
             Err(e) => {
-                repository
+                self.repo_job
                     .update_job_status(job.id, JobStatus::Error, Some(e.to_string()))
                     .await?;
                 Ok(())
@@ -155,21 +167,25 @@ impl JobRunner {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
+    use std::{sync::Arc, vec};
 
     use serde_json::json;
     use sqlx::{SqlitePool, sqlite::SqlitePoolOptions};
 
     use crate::{
-        domain::model::{Kline, Signal},
-        job::{
-            handler::{
-                ComputeSignalHandler, ComputeSignalPayload, CrawlPriceHandler, CrawlPricePayload,
-                CrawlTestHandler, CrawlTestPayload, JobHandlerRegistry,
+        application::{
+            handlers::{
+                JobHandlerRegistry,
+                handler_create_klines::{CrawlPriceHandler, CrawlPricePayload},
+                handler_create_signals::{ComputeSignalHandler, ComputeSignalPayload},
+                handler_demo::{CrawlTestHandler, CrawlTestPayload},
             },
             model::{Job, JobStatus, JobType},
-            repository::SqliteJobRepository,
             runner::JobRunner,
+        },
+        domain::model::{Kline, Signal},
+        infra::storage::{
+            repo_domain_sqlite::SqliteDomainRepository, repo_job_sqlite::SqliteJobRepository,
         },
     };
 
@@ -183,19 +199,21 @@ mod tests {
     #[tokio::test]
     async fn test_jobs_dummy_crawl() {
         let pool = setup_test_db().await.unwrap();
-        let repository = Arc::new(SqliteJobRepository::new(pool));
+        let repo_domain = Arc::new(SqliteDomainRepository::new(pool.clone()));
+        let repo_job = Arc::new(SqliteJobRepository::new(pool.clone()));
 
         let crawltest_handler = CrawlTestHandler;
 
         let mut handler_registry = JobHandlerRegistry::new();
-        handler_registry.register_handler(Arc::new(crawltest_handler));
+        handler_registry.register_handlers(vec![Arc::new(crawltest_handler)]);
 
         let concurrency = 2;
         let wait_ms = 500;
         let batch_size = concurrency;
 
         let runner = JobRunner::new(
-            repository.clone(),
+            repo_domain,
+            repo_job,
             Arc::new(handler_registry),
             concurrency,
             wait_ms,
@@ -204,7 +222,7 @@ mod tests {
 
         let mut jobs = vec![];
         for _ in 0..3 {
-            jobs.push((
+            jobs.push(Job::new(
                 JobType::CrawlTest,
                 json!(CrawlTestPayload {
                     url: "https://dummyjson.com/http/200".to_string(),
@@ -212,7 +230,7 @@ mod tests {
             ));
         }
         for _ in 0..3 {
-            jobs.push((
+            jobs.push(Job::new(
                 JobType::CrawlTest,
                 json!(CrawlTestPayload {
                     url: "https://dummyjson.com/http/404/bad".to_string(),
@@ -220,7 +238,7 @@ mod tests {
             ));
         }
 
-        runner.repository.create_jobs(jobs).await.unwrap();
+        runner.repo_job.create_jobs(jobs).await.unwrap();
 
         runner.run().await.unwrap();
 
@@ -228,9 +246,7 @@ mod tests {
             SELECT * FROM jobs
         "#;
 
-        let jobs = sqlx::query_as::<_, Job>(query)
-            .fetch_all(&repository.pool)
-            .await;
+        let jobs = sqlx::query_as::<_, Job>(query).fetch_all(&pool).await;
 
         assert!(jobs.is_ok());
         let jobs = jobs.unwrap();
@@ -260,21 +276,23 @@ mod tests {
     #[ignore = "network call to eastmoney"]
     async fn test_jobs_crawl_price_eastmoney() {
         let pool = setup_test_db().await.unwrap();
-        let repository = Arc::new(SqliteJobRepository::new(pool));
+        let repo_domain = Arc::new(SqliteDomainRepository::new(pool.clone()));
+        let repo_job = Arc::new(SqliteJobRepository::new(pool.clone()));
 
         let crawlprice_handler = CrawlPriceHandler {
-            pool: repository.pool.clone(),
+            repo: repo_domain.clone(),
         };
 
         let mut handler_registry = JobHandlerRegistry::new();
-        handler_registry.register_handler(Arc::new(crawlprice_handler));
+        handler_registry.register_handlers(vec![Arc::new(crawlprice_handler)]);
 
         let concurrency = 1;
         let wait_ms = 1000;
         let batch_size = concurrency;
 
         let runner = JobRunner::new(
-            repository.clone(),
+            repo_domain,
+            repo_job,
             Arc::new(handler_registry),
             concurrency,
             wait_ms,
@@ -285,17 +303,18 @@ mod tests {
         let jobs: Vec<_> = tickers
             .into_iter()
             .map(|ticker| {
-                (
+                Job::new(
                     JobType::CrawlPrice,
                     json!(CrawlPricePayload {
                         ticker: ticker.to_string(),
-                        url: format!("https://54.push2his.eastmoney.com/api/qt/stock/kline/get?cb=jQuery35106707668456928451_1695010059469&secid={}&ut=fa5fd1943c7b386f172d6893dbfba10b&fields1=f1%2Cf2%2Cf3%2Cf4%2Cf5%2Cf6&fields2=f51%2Cf52%2Cf53%2Cf54%2Cf55%2Cf56%2Cf57%2Cf58%2Cf59%2Cf60%2Cf61&klt=101&fqt=1&beg=20110101&end=20110202&lmt=1200&_=1695010059524", ticker)
+                        start: "20110101".to_string(),
+                        end: "20110202".to_string(),
                     }),
                 )
             })
             .collect();
 
-        runner.repository.create_jobs(jobs).await.unwrap();
+        runner.repo_job.create_jobs(jobs).await.unwrap();
 
         runner.run().await.unwrap();
 
@@ -303,9 +322,7 @@ mod tests {
             SELECT * FROM jobs
         "#;
 
-        let jobs = sqlx::query_as::<_, Job>(query)
-            .fetch_all(&repository.pool)
-            .await;
+        let jobs = sqlx::query_as::<_, Job>(query).fetch_all(&pool).await;
 
         assert!(jobs.is_ok());
         let jobs = jobs.unwrap();
@@ -319,11 +336,11 @@ mod tests {
         }
 
         let (count,): (i64,) = sqlx::query_as("SELECT COUNT(*) from klines")
-            .fetch_one(&repository.pool)
+            .fetch_one(&pool)
             .await
             .unwrap();
 
-        assert_eq!(count, 27);
+        assert_eq!(count, 6);
 
         let results: Vec<Kline> = sqlx::query_as(
             r#"
@@ -331,43 +348,44 @@ mod tests {
             FROM klines
             WHERE k_ticker = '105.TSLA'
             ORDER BY k_date ASC
-            LIMIT 2
+            LIMIT 1
             "#,
         )
-        .fetch_all(&repository.pool)
+        .fetch_all(&pool)
         .await
         .unwrap();
 
         assert_eq!(results[0].k_ticker, "105.TSLA");
-        assert_eq!(results[1].k_ticker, "105.TSLA");
-        assert_eq!(results[0].k_date, 20110126);
-        assert_eq!(results[1].k_date, 20110127);
+        assert_eq!(results[0].k_date, 20110128);
     }
 
     #[tokio::test]
     #[ignore = "network call to eastmoney"]
     async fn test_jobs_compute_signal_with_crawl() {
         let pool = setup_test_db().await.unwrap();
-        let repository = Arc::new(SqliteJobRepository::new(pool));
+        let repo_domain = Arc::new(SqliteDomainRepository::new(pool.clone()));
+        let repo_job = Arc::new(SqliteJobRepository::new(pool.clone()));
 
         let crawlprice_handler = CrawlPriceHandler {
-            pool: repository.pool.clone(),
+            repo: repo_domain.clone(),
         };
-
         let compute_signal_handler = ComputeSignalHandler {
-            pool: repository.pool.clone(),
+            repo: repo_domain.clone(),
         };
 
         let mut handler_registry = JobHandlerRegistry::new();
-        handler_registry.register_handler(Arc::new(crawlprice_handler));
-        handler_registry.register_handler(Arc::new(compute_signal_handler));
+        handler_registry.register_handlers(vec![
+            Arc::new(crawlprice_handler),
+            Arc::new(compute_signal_handler),
+        ]);
 
         let concurrency = 1;
         let wait_ms = 1000;
         let batch_size = concurrency;
 
         let runner = JobRunner::new(
-            repository.clone(),
+            repo_domain,
+            repo_job,
             Arc::new(handler_registry),
             concurrency,
             wait_ms,
@@ -378,22 +396,33 @@ mod tests {
         let jobs: Vec<_> = tickers
             .into_iter()
             .map(|ticker| {
-                (
+                Job::new(
                     JobType::CrawlPrice,
                     json!(CrawlPricePayload {
                         ticker: ticker.to_string(),
-                        url: format!("https://54.push2his.eastmoney.com/api/qt/stock/kline/get?cb=jQuery35106707668456928451_1695010059469&secid={}&ut=fa5fd1943c7b386f172d6893dbfba10b&fields1=f1%2Cf2%2Cf3%2Cf4%2Cf5%2Cf6&fields2=f51%2Cf52%2Cf53%2Cf54%2Cf55%2Cf56%2Cf57%2Cf58%2Cf59%2Cf60%2Cf61&klt=102&fqt=1&beg=0&end=20500101&lmt=1200&_=1695010059524", ticker)
+                        start: "0".to_string(),
+                        end: "20500101".to_string(),
                     }),
                 )
             })
             .collect();
 
-        runner.repository.create_jobs(jobs).await.unwrap();
+        runner.repo_job.create_jobs(jobs).await.unwrap();
         runner.run().await.unwrap();
 
         // Compute Signal Job
-        let jobs: Vec<_> = vec![(JobType::ComputeSignal, json!(ComputeSignalPayload {}))];
-        runner.repository.create_jobs(jobs).await.unwrap();
+        let jobs: Vec<_> = tickers
+            .into_iter()
+            .map(|ticker| {
+                Job::new(
+                    JobType::ComputeSignal,
+                    json!(ComputeSignalPayload {
+                        ticker: ticker.to_string(),
+                    }),
+                )
+            })
+            .collect();
+        runner.repo_job.create_jobs(jobs).await.unwrap();
         runner.run().await.unwrap();
 
         let query = r#"
@@ -402,12 +431,12 @@ mod tests {
 
         let jobs = sqlx::query_as::<_, Job>(query)
             .bind("computesignal")
-            .fetch_all(&repository.pool)
+            .fetch_all(&pool)
             .await;
 
         assert!(jobs.is_ok());
         let jobs = jobs.unwrap();
-        assert_eq!(jobs.len(), 1);
+        assert_eq!(jobs.len(), 4);
 
         for job in jobs {
             assert_eq!(job.job_type, JobType::ComputeSignal);
@@ -417,7 +446,7 @@ mod tests {
         }
 
         let (count,): (i64,) = sqlx::query_as("SELECT COUNT(*) from signals")
-            .fetch_one(&repository.pool)
+            .fetch_one(&pool)
             .await
             .unwrap();
 
@@ -428,13 +457,13 @@ mod tests {
             SELECT * FROM signals
             "#,
         )
-        .fetch_all(&repository.pool)
+        .fetch_all(&pool)
         .await
         .unwrap();
 
         println!("{:#?}", results);
 
-        assert_eq!(results[0].ticker, "1.600635");
-        assert!(f64::abs(results[0].kdj_k - 76.42935683440258) < 1e-5);
+        assert_eq!(results[0].ticker, "105.APP");
+        assert!(f64::abs(results[0].kdj_k - 71.34804411324646) < 1e-5);
     }
 }

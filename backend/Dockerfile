@@ -24,8 +24,8 @@ COPY . .
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
   --mount=type=cache,target=$SCCACHE_DIR,sharing=locked \
   --mount=type=cache,target=/app/target \
-  cargo build --release && \
-  mv ./target/release/backend server
+  cargo build --release --bin server && \
+  mv ./target/release/server server
 
 # Runtime image
 FROM gcr.io/distroless/cc-debian12
@@ -43,6 +43,8 @@ COPY --from=builder /app/server server
 COPY --from=builder /app/migrations migrations
 
 EXPOSE 8080
+
+ENV RUST_LOG=warn
 
 # Run the app
 CMD ["./server"]

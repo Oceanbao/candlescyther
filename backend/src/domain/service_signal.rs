@@ -1,13 +1,6 @@
 use core::f64;
 
-use crate::domain::model::Kline;
-
-#[derive(Debug, Clone, Copy)]
-pub struct KDJ {
-    pub k: f64,
-    pub d: f64,
-    pub j: f64,
-}
+use crate::domain::model::{KDJ, Kline};
 
 /// Computes the KDJ indicator for a series of klines.
 ///

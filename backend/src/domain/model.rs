@@ -2,6 +2,14 @@ use serde::{Deserialize, Serialize};
 use sqlx::prelude::FromRow;
 use utoipa::ToSchema;
 
+// HealthCheck record for serialization
+#[derive(Serialize, Debug, FromRow)]
+pub struct User {
+    pub id: i64,
+    pub user_name: String,
+    pub user_role: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
 pub struct Stock {
     pub ticker: String,
@@ -33,4 +41,11 @@ pub struct Signal {
     pub ticker: String,
     pub kdj_k: f64,
     pub kdj_d: f64,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct KDJ {
+    pub k: f64,
+    pub d: f64,
+    pub j: f64,
 }

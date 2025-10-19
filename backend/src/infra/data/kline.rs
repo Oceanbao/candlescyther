@@ -6,13 +6,29 @@ use crate::{
     infra::data::service::{parse_raw_eastmoney, url2text},
 };
 
+pub struct UrlKlineEastmoney(String);
+
+// NOTE: this url is for weekly kline.
+impl UrlKlineEastmoney {
+    pub fn new(ticker: &str, start: &str, end: &str) -> Self {
+        let url = format!(
+            "https://54.push2his.eastmoney.com/api/qt/stock/kline/get?cb=jQuery35106707668456928451_1695010059469&\
+                secid={}&ut=fa5fd1943c7b386f172d6893dbfba10b&fields1=f1%2Cf2%2Cf3%2Cf4%2Cf5%2Cf6&fields2=f51%2Cf52%2Cf53%2Cf54%2Cf55%2Cf56%2Cf57%2Cf58%2Cf59%2Cf60%2Cf61&\
+                klt=102&fqt=1&\
+                beg={}&end={}&lmt=1200&_=1695010059524",
+            ticker, start, end,
+        );
+        UrlKlineEastmoney(url)
+    }
+}
+
 // crawl_kline_eastmoney(url) -> Result<Vec<Kline>, Error>
 // url2text(url) -> raw
 // parse_raw_price_eastmoney(raw) -> RawPriceEastmoney
 // parse_kline_eastmoney(RawPriceEastmoney) -> KlineEastmoney
 // create_kline_eastmoney(RawPriceEastmoney) -> Vec<Kline>
-pub async fn crawl_kline_eastmoney(url: &str) -> Result<Vec<Kline>, anyhow::Error> {
-    let raw = url2text(url).await?;
+pub async fn crawl_kline_eastmoney(url: UrlKlineEastmoney) -> Result<Vec<Kline>, anyhow::Error> {
+    let raw = url2text(&url.0).await?;
     let raw_price: Result<RawPriceEastmoney, _> = parse_raw_eastmoney(&raw);
 
     match raw_price {
@@ -134,8 +150,8 @@ fn date_string_to_i32(date_str: &str) -> Result<i64, anyhow::Error> {
 #[cfg(test)]
 mod tests {
     use crate::infra::data::kline::{
-        RawPriceEastmoney, RawPriceEastmoneyData, crawl_kline_eastmoney, create_kline_eastmoney,
-        parse_kline_eastmoney, parse_raw_eastmoney,
+        RawPriceEastmoney, RawPriceEastmoneyData, UrlKlineEastmoney, crawl_kline_eastmoney,
+        create_kline_eastmoney, parse_kline_eastmoney, parse_raw_eastmoney,
     };
 
     const DEMO_PRICE_EASTMONEY_GOOD: &str = r#"jQuery35105424247560587396_1758630789935({"rc":0,"rt":17,"svr":177617930,"lt":2,"full":0,"dlmkts":"","data":{"code":"APP","market":105,"name":"Applovin Corp-A","decimal":3,"dktotal":1125,"preKPrice":80.0,"klines":["2021-04-16,70.000,61.000,71.510,58.650,15643711,1034038718.000,16.08,-23.75,-19.000,4.37","2021-04-23,60.000,58.500,62.950,55.705,13380547,802760598.000,11.88,-4.10,-2.500,3.74","2021-04-30,58.770,58.010,61.110,57.650,2313034,136641797.000,5.91,-0.84,-0.490,0.65","2021-05-07,58.530,57.260,60.410,54.720,3922270,226305381.000,9.81,-1.29,-0.750,1.10","2021-05-14,59.210,57.260,59.210,49.410,7027414,375163594.000,17.11,0.00,0.000,1.93","2021-05-21,56.170,68.350,70.170,55.825,4603785,298832284.000,25.05,19.37,11.090,1.26"]}});"#;
@@ -206,7 +222,7 @@ mod tests {
     #[ignore = "network call to eastmoney"]
     async fn test_crawl_kline_eastmoney() {
         // 105.TSLA 20110126 - 20110202 1D
-        let url = "https://54.push2his.eastmoney.com/api/qt/stock/kline/get?cb=jQuery35106707668456928451_1695010059469&secid=105.TSLA&ut=fa5fd1943c7b386f172d6893dbfba10b&fields1=f1%2Cf2%2Cf3%2Cf4%2Cf5%2Cf6&fields2=f51%2Cf52%2Cf53%2Cf54%2Cf55%2Cf56%2Cf57%2Cf58%2Cf59%2Cf60%2Cf61&klt=101&fqt=1&beg=0&end=20110202&lmt=1200&_=1695010059524";
+        let url = UrlKlineEastmoney::new("105.TSLA", "20110126", "20110401");
 
         let result = crawl_kline_eastmoney(url).await;
 
@@ -218,21 +234,21 @@ mod tests {
         let last = klines.last().unwrap();
 
         assert_eq!(first.k_ticker, "105.TSLA");
-        assert_eq!(first.k_date, 20110126);
+        assert_eq!(first.k_date, 20110128);
         assert_eq!(first.k_open, 1.647);
-        assert_eq!(first.k_close, 1.650);
-        assert_eq!(first.k_high, 1.659);
-        assert_eq!(first.k_low, 1.607);
-        assert_eq!(first.k_volume, 1078933.0);
+        assert_eq!(first.k_close, 1.601);
+        assert_eq!(first.k_high, 1.672);
+        assert_eq!(first.k_low, 1.583);
+        assert_eq!(first.k_volume, 3017209.0);
         assert_eq!(first.k_value, 0.0);
 
         assert_eq!(last.k_ticker, "105.TSLA");
-        assert_eq!(last.k_date, 20110202);
-        assert_eq!(last.k_open, 1.611);
-        assert_eq!(last.k_close, 1.596);
-        assert_eq!(last.k_high, 1.612);
-        assert_eq!(last.k_low, 1.577);
-        assert_eq!(last.k_volume, 569472.0);
+        assert_eq!(last.k_date, 20110401);
+        assert_eq!(last.k_open, 1.513);
+        assert_eq!(last.k_close, 1.777);
+        assert_eq!(last.k_high, 1.914);
+        assert_eq!(last.k_low, 1.503);
+        assert_eq!(last.k_volume, 17176406.0);
         assert_eq!(last.k_value, 0.0);
     }
 }

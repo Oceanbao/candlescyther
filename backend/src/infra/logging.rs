@@ -3,7 +3,7 @@ use std::{borrow::Cow, fmt::Display};
 use serde::Serialize;
 use utoipa::ToSchema;
 
-use crate::infra::http::server::AppState;
+use crate::infra::http::AppState;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)] // Ensure it takes up only 1 byte
@@ -87,7 +87,7 @@ pub async fn logit(app_state: &AppState, entry: LogEntry<'_>) {
 
     if let Err(e) = sqlx::query_as!(
         LogEntry,
-        "INSERT INTO logs (log_timestamp, log_level, log_target, log_message, log_line) VALUES ($1, $2, $3, $4, $5)",
+        "INSERT INTO logs (log_timestamp, log_level, log_target, log_message, log_line) VALUES (?, ?, ?, ?, ?)",
         entry.log_timestamp,
         entry.log_level,
         entry.log_target,

@@ -1,3 +1,3 @@
 pub mod model;
-pub mod service;
-pub mod signal;
+pub mod repository;
+pub mod service_signal;

@@ -5,9 +5,21 @@ use crate::{
     infra::data::service::{parse_raw_eastmoney, url2text},
 };
 
+pub struct UrlStockEastmoney(String);
+
+impl UrlStockEastmoney {
+    pub fn new(ticker: &str) -> Self {
+        let url = format!(
+            "https://push2.eastmoney.com/api/qt/stock/get?invt=2&fltt=1&cb=jQuery35105046193517115448_1760700941707&fields=f57%2Cf58%2Cf105%2Cf107%2Cf116%2Cf164%2Cf167%2Cf183%2Cf187%2Cf188&secid={}&ut=fa5fd1943c7b386f172d6893dbfba10b&wbp2u=%7C0%7C0%7C0%7Cweb&dect=1&_=1760700941708",
+            ticker
+        );
+        UrlStockEastmoney(url)
+    }
+}
+
 /// Crawl stock meta from `eastmoney api`.
-pub async fn crawl_stock_eastmoney(url: &str) -> Result<Stock, anyhow::Error> {
-    let raw = url2text(url).await?;
+pub async fn crawl_stock_eastmoney(url: UrlStockEastmoney) -> Result<Stock, anyhow::Error> {
+    let raw = url2text(&url.0).await?;
     let raw_stock: Result<RawStockEastmoney, _> = parse_raw_eastmoney(&raw);
 
     match raw_stock {
@@ -87,8 +99,10 @@ where
 #[cfg(test)]
 mod tests {
     use crate::infra::data::{
-        meta::{RawStockEastmoney, RawStockEastmoneyData},
         service::parse_raw_eastmoney,
+        stock::{
+            RawStockEastmoney, RawStockEastmoneyData, UrlStockEastmoney, crawl_stock_eastmoney,
+        },
     };
 
     const DEMO_STOCK_EASTMONEY_GOOD: &str = r#"jQuery35105046193517115448_1760700941707({"rc":0,"rt":4,"svr":183640384,"lt":1,"full":1,"dlmkts":"","data":{"f57":"TSLA","f58":"特斯拉","f105":0.0,"f107":105,"f116":1442516957364.52,"f164":24524,"f167":1866,"f183":41831000000.0,"f187":0.0,"f188":0.392752417028}});"#;
@@ -119,5 +133,21 @@ mod tests {
         let result: Result<RawStockEastmoney, _> = parse_raw_eastmoney(DEMO_STOCK_EASTMONEY_BAD);
 
         assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    #[ignore = "network call to eastmoney"]
+    async fn test_crawl_stock_eastmoney() {
+        let url = UrlStockEastmoney::new("105.TSLA");
+
+        let stock = crawl_stock_eastmoney(url).await;
+
+        assert!(stock.is_ok());
+
+        let stock = stock.unwrap();
+
+        assert_eq!(stock.ticker, "105.TSLA");
+        assert_eq!(stock.market, 105);
+        assert_eq!(stock.realname, "特斯拉");
     }
 }

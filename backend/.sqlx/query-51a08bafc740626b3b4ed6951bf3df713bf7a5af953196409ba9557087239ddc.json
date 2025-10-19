@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT * FROM logs LIMIT 10",
+  "query": "SELECT * FROM logs LIMIT 100",
   "describe": {
     "columns": [
       {
@@ -46,5 +46,5 @@
       false
     ]
   },
-  "hash": "f9aa06a8dd330b1d61ddb15ce039736ba23d601409657a8f87038f103f8ad00c"
+  "hash": "51a08bafc740626b3b4ed6951bf3df713bf7a5af953196409ba9557087239ddc"
 }

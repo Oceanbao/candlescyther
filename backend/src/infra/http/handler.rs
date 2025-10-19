@@ -11,18 +11,15 @@ use utoipa::IntoParams;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::{
-    domain::model::{Kline, Signal},
-    infra::{
-        http::server::{AppState, User},
-        logging::{LogEntry, LogLevel, logit},
-    },
-    job::{
-        handler::{ComputeSignalPayload, CrawlPricePayload},
-        model::{Job, JobType},
-    },
+    application::{
+        handlers::{handler_create_klines::CrawlPricePayload, handler_create_signals::ComputeSignalPayload}, model::{Job, JobType}
+    }, domain::model::{Kline, Signal, User}, infra::{
+        http::AppState,
+        logging::{logit, LogEntry, LogLevel},
+    }
 };
 
-pub fn create_routes(app_state: AppState) -> OpenApiRouter {
+pub fn create_routes_api(app_state: AppState) -> OpenApiRouter {
     OpenApiRouter::new()
         // /logs
         .routes(routes!(list_logs))
@@ -204,16 +201,18 @@ pub async fn crawl_klines(
 
     let mut jobs = vec![];
     for ticker in &query.tickers {
-        jobs.push((
-            JobType::CrawlPrice,
+        jobs.push(
+            Job::new(JobType::CrawlPrice,  
             json!(CrawlPricePayload {
                 ticker: ticker.to_string(),
-                url: format!("https://54.push2his.eastmoney.com/api/qt/stock/kline/get?cb=jQuery35106707668456928451_1695010059469&secid={}&ut=fa5fd1943c7b386f172d6893dbfba10b&fields1=f1%2Cf2%2Cf3%2Cf4%2Cf5%2Cf6&fields2=f51%2Cf52%2Cf53%2Cf54%2Cf55%2Cf56%2Cf57%2Cf58%2Cf59%2Cf60%2Cf61&klt=102&fqt=1&beg=0&end=20500101&lmt=1200&_=1695010059524", ticker)
+                start: "0".to_string(),
+                end: "20500101".to_string(),
             })
-        ));
+            )
+        );
     }
 
-    if let Err(e) = state.runner.repository.create_jobs(jobs).await {
+    if let Err(e) = state.runner.repo_job.create_jobs(jobs).await {
         logit(
             &state,
             LogEntry::new(
@@ -276,9 +275,9 @@ where
     )
 )]
 pub async fn compute_signals(State(state): State<AppState>) -> impl IntoResponse {
-    let job = (JobType::ComputeSignal, json!(ComputeSignalPayload {}));
+    let job = Job::new(JobType::ComputeSignal, json!(ComputeSignalPayload { ticker: "105.TSLA".to_string()}));
 
-    if let Err(e) = state.runner.repository.create_jobs(vec![job]).await {
+    if let Err(e) = state.runner.repo_job.create_jobs(vec![job]).await {
         logit(
             &state,
             LogEntry::new(

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO stocks (ticker, realname, market, total_cap, pe, pb, revenue, net, margin, debt)\n            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 10
+    },
+    "nullable": []
+  },
+  "hash": "c8b69a2ac42ec7cad41352440ffe251bb2740a146f2956b76122da49bd972401"
+}

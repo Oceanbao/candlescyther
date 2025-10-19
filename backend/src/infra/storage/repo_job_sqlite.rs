@@ -1,30 +1,13 @@
 use async_trait::async_trait;
 use sqlx::SqlitePool;
 
-use crate::job::{
-    model::{Job, JobStatus, JobType},
+use crate::application::{
+    model::{Job, JobStatus},
+    repository::JobRepository,
     runner::RunnerError,
 };
 
-#[async_trait]
-pub trait JobRepository: Send + Sync {
-    async fn create_jobs(&self, jobs: Vec<(JobType, serde_json::Value)>)
-    -> Result<(), RunnerError>;
-    async fn get_pending_jobs(&self, limit: usize) -> Result<Vec<Job>, RunnerError>;
-    async fn update_job_status(
-        &self,
-        job_id: i64,
-        status: JobStatus,
-        error_message: Option<String>,
-    ) -> Result<(), RunnerError>;
-    async fn mark_job_running(&self, job_id: i64) -> Result<(), RunnerError>;
-    async fn mark_job_done(
-        &self,
-        job_id: i64,
-        output: Option<serde_json::Value>,
-    ) -> Result<(), RunnerError>;
-}
-
+#[derive(Clone)]
 pub struct SqliteJobRepository {
     pub pool: SqlitePool,
 }
@@ -37,26 +20,23 @@ impl SqliteJobRepository {
 
 #[async_trait]
 impl JobRepository for SqliteJobRepository {
-    async fn create_jobs(
-        &self,
-        jobs: Vec<(JobType, serde_json::Value)>,
-    ) -> Result<(), RunnerError> {
-        let now = chrono::Utc::now().to_string();
-        let query = r#"
-            INSERT INTO jobs (job_type, job_status, payload, created_at, updated_at)
-            VALUES ($1, $2, $3, $4, $4)
-        "#;
-
+    async fn create_jobs(&self, jobs: Vec<Job>) -> Result<(), RunnerError> {
         let tx = self.pool.begin().await?;
 
         for job in jobs {
-            let _row = sqlx::query(query)
-                .bind(job.0)
-                .bind(JobStatus::Pending)
-                .bind(job.1)
-                .bind(now.clone())
-                .execute(&self.pool)
-                .await?;
+            sqlx::query!(
+                r#"
+            INSERT INTO jobs (job_type, job_status, payload, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?)
+            "#,
+                job.job_type,
+                job.job_status,
+                job.payload,
+                job.created_at,
+                job.updated_at,
+            )
+            .execute(&self.pool)
+            .await?;
         }
 
         tx.commit().await?;

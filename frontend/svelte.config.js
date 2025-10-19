@@ -28,6 +28,9 @@ const config = {
 				exclude: ['<all>']
 			}
 		})
+	},
+	vitePlugin: {
+		inspector: true
 	}
 };
 
