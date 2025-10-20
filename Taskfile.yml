@@ -20,6 +20,14 @@ tasks:
     cmds:
       - cd frontend && bun run dev
 
+  buildui:
+    cmds:
+      - cd frontend && bun run build
+
+  deployui:
+    cmds:
+      - cd frontend && wrangler pages deploy ./.svelte-kit/cloudflare
+
   # main:
   #   desc: Run full build process.
   #   cmds:
