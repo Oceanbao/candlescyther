@@ -178,7 +178,8 @@ mod tests {
                 JobHandlerRegistry,
                 handler_create_klines::{CrawlPriceHandler, CrawlPricePayload},
                 handler_create_signals::{ComputeSignalHandler, ComputeSignalPayload},
-                handler_demo::{CrawlTestHandler, CrawlTestPayload},
+                handler_create_stock::{CreateStockHandler, CreateStockPayload},
+                handler_demo::CrawlTestPayload,
             },
             model::{Job, JobStatus, JobType},
             runner::JobRunner,
@@ -196,29 +197,45 @@ mod tests {
         Ok(pool)
     }
 
-    #[tokio::test]
-    async fn test_jobs_dummy_crawl() {
-        let pool = setup_test_db().await.unwrap();
+    async fn setup_runner(pool: SqlitePool) -> Result<JobRunner, anyhow::Error> {
         let repo_domain = Arc::new(SqliteDomainRepository::new(pool.clone()));
         let repo_job = Arc::new(SqliteJobRepository::new(pool.clone()));
 
-        let crawltest_handler = CrawlTestHandler;
+        let crawlprice_handler = CrawlPriceHandler {
+            repo: repo_domain.clone(),
+        };
+        let compute_signal_handler = ComputeSignalHandler {
+            repo: repo_domain.clone(),
+        };
+        let create_stock_handler = CreateStockHandler {
+            repo: repo_domain.clone(),
+        };
 
         let mut handler_registry = JobHandlerRegistry::new();
-        handler_registry.register_handlers(vec![Arc::new(crawltest_handler)]);
+        handler_registry.register_handlers(vec![
+            Arc::new(crawlprice_handler),
+            Arc::new(compute_signal_handler),
+            Arc::new(create_stock_handler),
+        ]);
 
         let concurrency = 2;
-        let wait_ms = 500;
+        let wait_ms = 1000;
         let batch_size = concurrency;
 
-        let runner = JobRunner::new(
+        Ok(JobRunner::new(
             repo_domain,
             repo_job,
             Arc::new(handler_registry),
             concurrency,
             wait_ms,
             batch_size,
-        );
+        ))
+    }
+
+    #[tokio::test]
+    async fn test_jobs_dummy_crawl() {
+        let pool = setup_test_db().await.unwrap();
+        let runner = setup_runner(pool).await.unwrap();
 
         let mut jobs = vec![];
         for _ in 0..3 {
@@ -242,11 +259,7 @@ mod tests {
 
         runner.run().await.unwrap();
 
-        let query = r#"
-            SELECT * FROM jobs
-        "#;
-
-        let jobs = sqlx::query_as::<_, Job>(query).fetch_all(&pool).await;
+        let jobs = runner.repo_job.get_jobs_all().await;
 
         assert!(jobs.is_ok());
         let jobs = jobs.unwrap();
@@ -276,28 +289,7 @@ mod tests {
     #[ignore = "network call to eastmoney"]
     async fn test_jobs_crawl_price_eastmoney() {
         let pool = setup_test_db().await.unwrap();
-        let repo_domain = Arc::new(SqliteDomainRepository::new(pool.clone()));
-        let repo_job = Arc::new(SqliteJobRepository::new(pool.clone()));
-
-        let crawlprice_handler = CrawlPriceHandler {
-            repo: repo_domain.clone(),
-        };
-
-        let mut handler_registry = JobHandlerRegistry::new();
-        handler_registry.register_handlers(vec![Arc::new(crawlprice_handler)]);
-
-        let concurrency = 1;
-        let wait_ms = 1000;
-        let batch_size = concurrency;
-
-        let runner = JobRunner::new(
-            repo_domain,
-            repo_job,
-            Arc::new(handler_registry),
-            concurrency,
-            wait_ms,
-            batch_size,
-        );
+        let runner = setup_runner(pool.clone()).await.unwrap();
 
         let tickers = ["105.APP", "105.TSLA", "1.600635", "1.688981"];
         let jobs: Vec<_> = tickers
@@ -318,11 +310,7 @@ mod tests {
 
         runner.run().await.unwrap();
 
-        let query = r#"
-            SELECT * FROM jobs
-        "#;
-
-        let jobs = sqlx::query_as::<_, Job>(query).fetch_all(&pool).await;
+        let jobs = runner.repo_job.get_jobs_all().await;
 
         assert!(jobs.is_ok());
         let jobs = jobs.unwrap();
@@ -363,34 +351,7 @@ mod tests {
     #[ignore = "network call to eastmoney"]
     async fn test_jobs_compute_signal_with_crawl() {
         let pool = setup_test_db().await.unwrap();
-        let repo_domain = Arc::new(SqliteDomainRepository::new(pool.clone()));
-        let repo_job = Arc::new(SqliteJobRepository::new(pool.clone()));
-
-        let crawlprice_handler = CrawlPriceHandler {
-            repo: repo_domain.clone(),
-        };
-        let compute_signal_handler = ComputeSignalHandler {
-            repo: repo_domain.clone(),
-        };
-
-        let mut handler_registry = JobHandlerRegistry::new();
-        handler_registry.register_handlers(vec![
-            Arc::new(crawlprice_handler),
-            Arc::new(compute_signal_handler),
-        ]);
-
-        let concurrency = 1;
-        let wait_ms = 1000;
-        let batch_size = concurrency;
-
-        let runner = JobRunner::new(
-            repo_domain,
-            repo_job,
-            Arc::new(handler_registry),
-            concurrency,
-            wait_ms,
-            batch_size,
-        );
+        let runner = setup_runner(pool.clone()).await.unwrap();
 
         let tickers = ["105.APP", "105.TSLA", "1.600635", "1.688981"];
         let jobs: Vec<_> = tickers
@@ -465,5 +426,40 @@ mod tests {
 
         assert_eq!(results[0].ticker, "105.APP");
         assert!(f64::abs(results[0].kdj_k - 71.34804411324646) < 1e-5);
+    }
+
+    #[tokio::test]
+    #[ignore = "network call to eastmoney"]
+    async fn test_create_stock() {
+        let pool = setup_test_db().await.unwrap();
+        let runner = setup_runner(pool.clone()).await.unwrap();
+
+        let tickers = ["105.APP", "105.TSLA"];
+        let jobs: Vec<_> = tickers
+            .into_iter()
+            .map(|ticker| {
+                Job::new(
+                    JobType::CreateStock,
+                    json!(CreateStockPayload {
+                        ticker: ticker.to_string(),
+                    }),
+                )
+            })
+            .collect();
+
+        runner.repo_job.create_jobs(jobs).await.unwrap();
+        runner.run().await.unwrap();
+
+        let signals = runner.repo_domain.get_signals_all().await.unwrap();
+
+        assert_eq!(signals.len(), tickers.len());
+
+        let stocks = runner.repo_domain.get_stock_all().await.unwrap();
+
+        assert_eq!(stocks.len(), tickers.len());
+
+        let klines = runner.repo_domain.get_klines("105.APP").await.unwrap();
+
+        assert!(klines.len() as i64 > 230);
     }
 }

@@ -4,26 +4,6 @@
  */
 
 export interface paths {
-    "/api/crawl": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Crawl all tickers for klines.
-         * @description Returns a 200 if the job is submitted.
-         */
-        get: operations["crawl_klines"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/jobs": {
         parameters: {
             query?: never;
@@ -84,26 +64,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/run/signals": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Trigger compute signals job.
-         * @description Returns OK if job submitted.
-         */
-        get: operations["compute_signals"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/signals": {
         parameters: {
             query?: never;
@@ -124,10 +84,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/stocks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Crawl all tickers for klines.
+         * @description Returns a 200 if the job is submitted.
+         */
+        post: operations["create_stocks"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        ApiError: {
+            DatabaseError: string;
+        } | {
+            NotFound: string;
+        } | {
+            MissingInput: string;
+        } | {
+            Unauthorized: string;
+        } | {
+            RunnerError: string;
+        };
+        CreateStockRequest: {
+            tickers: string;
+        };
         Job: {
             created_at: string;
             error_message?: string | null;
@@ -141,7 +135,7 @@ export interface components {
         /** @enum {string} */
         JobStatus: "Pending" | "Running" | "Done" | "Error";
         /** @enum {string} */
-        JobType: "CrawlPrice" | "CrawlTest" | "ComputeSignal";
+        JobType: "CreateStock" | "CrawlPrice" | "CrawlTest" | "ComputeSignal";
         Kline: {
             /** Format: double */
             k_close: number;
@@ -186,44 +180,6 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    crawl_klines: {
-        parameters: {
-            query: {
-                tickers: string[];
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Job submitted */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Tickers is required */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Job runner error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
     list_jobs: {
         parameters: {
             query?: never;
@@ -248,7 +204,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ApiError"];
                 };
             };
         };
@@ -279,7 +235,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ApiError"];
                 };
             };
             /** @description Database error */
@@ -288,7 +244,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ApiError"];
                 };
             };
         };
@@ -317,34 +273,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    compute_signals: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Job submitted */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Job runner error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ApiError"];
                 };
             };
         };
@@ -373,7 +302,47 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    create_stocks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateStockRequest"];
+            };
+        };
+        responses: {
+            /** @description Job submitted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Tickers is required */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Job runner error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
                 };
             };
         };

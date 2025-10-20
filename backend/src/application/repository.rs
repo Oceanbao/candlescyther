@@ -21,4 +21,5 @@ pub trait JobRepository: Send + Sync {
         job_id: i64,
         output: Option<serde_json::Value>,
     ) -> Result<(), RunnerError>;
+    async fn get_jobs_all(&self) -> Result<Vec<Job>, RunnerError>;
 }

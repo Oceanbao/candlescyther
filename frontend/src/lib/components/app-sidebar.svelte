@@ -49,7 +49,7 @@
 			},
 			{
 				title: 'Logs',
-				url: '#',
+				url: '/logs',
 				icon: IconLogs
 			}
 		],

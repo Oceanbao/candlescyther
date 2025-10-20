@@ -29,6 +29,11 @@ const config = {
 			}
 		})
 	},
+	compilerOptions: {
+		experimental: {
+			async: true
+		}
+	},
 	vitePlugin: {
 		inspector: true
 	}

@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { getSignals } from '$lib/api/api.remote';
-	import DataTable from './table-signals/data-table.svelte';
-	import { columns } from './table-signals/signals.js';
+	import { getLogs } from '$lib/api/api.remote';
+	import DataTable from './table-logs/data-table.svelte';
+	import { columns } from './table-logs/logs.js';
 
-	let query = getSignals();
+	let query = getLogs();
 </script>
 
 <div class="flex flex-1 flex-col">

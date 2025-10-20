@@ -9,13 +9,16 @@ tasks:
 
   openapi:
     cmds:
-      - cd backend && cargo b && cd ..
       - mv backend/openapi.json frontend/
       - cd frontend && bun openapi-typescript ./openapi.json -o ./src/lib/server/api.d.ts
 
-  serve:
+  server:
     cmds:
       - cd backend && cargo r
+
+  client:
+    cmds:
+      - cd frontend && bun run dev
 
   # main:
   #   desc: Run full build process.

@@ -13,7 +13,7 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Spinner } from './ui/spinner';
-	import { runComputeSignals } from '../../routes/jobs.remote';
+	import { createStocks } from '$lib/api/api.remote';
 
 	let { items }: { items: { title: string; url: string; icon?: Icon }[] } = $props();
 
@@ -32,7 +32,7 @@
 	let fetchDone = $state(false);
 	function runFetch() {
 		fetching = true;
-		runComputeSignals();
+		createStocks(tickers);
 		fetching = false;
 		fetchDone = true;
 	}
@@ -102,10 +102,10 @@
 						{:else if addTicker}
 							<div class="flex flex-1 flex-col items-center justify-center gap-2">
 								<Label for="tickers" class="text-right">Tickers</Label>
-								<small class="text-red-800">(comma separated, e.g. 105.APPL,1.600232)</small>
+								<small class="text-red-800">(comma separated, e.g. 105.APP,1.600232)</small>
 								<Input id="tickers" bind:value={tickers} class="" />
 								<Dialog.Footer>
-									<Button type="submit" onclick={() => {}}>
+									<Button type="submit" onclick={() => runFetch()}>
 										{#if fetching}
 											<Spinner />
 										{:else if fetchDone}
@@ -123,7 +123,7 @@
 									{:else if fetchDone}
 										<IconCircleCheck />
 									{/if}
-									Run Signals</Button
+									Run</Button
 								>
 							</Dialog.Footer>
 						{/if}

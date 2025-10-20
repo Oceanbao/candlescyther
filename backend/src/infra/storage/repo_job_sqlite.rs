@@ -119,4 +119,16 @@ impl JobRepository for SqliteJobRepository {
 
         Ok(())
     }
+
+    async fn get_jobs_all(&self) -> Result<Vec<Job>, RunnerError> {
+        let query = r#"
+            SELECT * FROM jobs
+        "#;
+
+        let jobs = sqlx::query_as::<_, Job>(query)
+            .fetch_all(&self.pool)
+            .await?;
+
+        Ok(jobs)
+    }
 }

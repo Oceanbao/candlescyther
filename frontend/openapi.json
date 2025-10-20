@@ -9,50 +9,6 @@
     "version": "0.1.0"
   },
   "paths": {
-    "/api/crawl": {
-      "get": {
-        "tags": [
-          "candlescyther"
-        ],
-        "summary": "Crawl all tickers for klines.",
-        "description": "Returns a 200 if the job is submitted.",
-        "operationId": "crawl_klines",
-        "parameters": [
-          {
-            "name": "tickers",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Job submitted"
-          },
-          "400": {
-            "description": "Tickers is required",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "500": {
-            "description": "Job runner error",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/jobs": {
       "get": {
         "tags": [
@@ -79,7 +35,9 @@
             "description": "Database error",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
               }
             }
           }
@@ -122,7 +80,9 @@
             "description": "Ticker is required",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
               }
             }
           },
@@ -130,7 +90,9 @@
             "description": "Database error",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
               }
             }
           }
@@ -163,30 +125,9 @@
             "description": "Database error",
             "content": {
               "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/run/signals": {
-      "get": {
-        "tags": [
-          "candlescyther"
-        ],
-        "summary": "Trigger compute signals job.",
-        "description": "Returns OK if job submitted.",
-        "operationId": "compute_signals",
-        "responses": {
-          "200": {
-            "description": "Job submitted"
-          },
-          "500": {
-            "description": "Job runner error",
-            "content": {
-              "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
               }
             }
           }
@@ -219,7 +160,54 @@
             "description": "Database error",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/stocks": {
+      "post": {
+        "tags": [
+          "candlescyther"
+        ],
+        "summary": "Crawl all tickers for klines.",
+        "description": "Returns a 200 if the job is submitted.",
+        "operationId": "create_stocks",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateStockRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Job submitted"
+          },
+          "400": {
+            "description": "Tickers is required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Job runner error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
               }
             }
           }
@@ -229,6 +217,81 @@
   },
   "components": {
     "schemas": {
+      "ApiError": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "DatabaseError"
+            ],
+            "properties": {
+              "DatabaseError": {
+                "type": "string"
+              }
+            },
+            "example": "failed to retrieve from database"
+          },
+          {
+            "type": "object",
+            "required": [
+              "NotFound"
+            ],
+            "properties": {
+              "NotFound": {
+                "type": "string"
+              }
+            },
+            "example": "id = 1"
+          },
+          {
+            "type": "object",
+            "required": [
+              "MissingInput"
+            ],
+            "properties": {
+              "MissingInput": {
+                "type": "string"
+              }
+            },
+            "example": "require query param x"
+          },
+          {
+            "type": "object",
+            "required": [
+              "Unauthorized"
+            ],
+            "properties": {
+              "Unauthorized": {
+                "type": "string"
+              }
+            },
+            "example": "missing api key"
+          },
+          {
+            "type": "object",
+            "required": [
+              "RunnerError"
+            ],
+            "properties": {
+              "RunnerError": {
+                "type": "string"
+              }
+            },
+            "example": "job runner error"
+          }
+        ]
+      },
+      "CreateStockRequest": {
+        "type": "object",
+        "required": [
+          "tickers"
+        ],
+        "properties": {
+          "tickers": {
+            "type": "string"
+          }
+        }
+      },
       "Job": {
         "type": "object",
         "required": [
@@ -277,6 +340,7 @@
       "JobType": {
         "type": "string",
         "enum": [
+          "CreateStock",
           "CrawlPrice",
           "CrawlTest",
           "ComputeSignal"
