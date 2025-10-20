@@ -25,12 +25,12 @@ initial_size = '10gb'
 # min_machines_running = 1
 # processes = ["app"]
 processes = ["app"]
-internal_port = 8080       # Must match the port your /app/server is listening on (PORT=8080)
+internal_port = 8080           # Must match the port your /app/server is listening on (PORT=8080)
 force_https = true
 protocol = "tcp"
-auto_stop_machines = 'off'
+auto_stop_machines = "suspend"
 auto_start_machines = true
-min_machines_running = 1   # Ensures machine stays running for persistent volume
+min_machines_running = 0       # Ensures machine stays running for persistent volume
 
 [[services.ports]]
 port = 80
