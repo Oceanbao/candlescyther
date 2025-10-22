@@ -170,11 +170,44 @@
       }
     },
     "/api/stocks": {
+      "get": {
+        "tags": [
+          "candlescyther"
+        ],
+        "summary": "List all stocks.",
+        "description": "Returns all stocks.",
+        "operationId": "list_stocks",
+        "responses": {
+          "200": {
+            "description": "List all stocks from stocks table.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Stock"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Database error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
       "post": {
         "tags": [
           "candlescyther"
         ],
-        "summary": "Crawl all tickers for klines.",
+        "summary": "Create stocks with meta,klines,signals.",
         "description": "Returns a 200 if the job is submitted.",
         "operationId": "create_stocks",
         "requestBody": {
@@ -203,6 +236,93 @@
           },
           "500": {
             "description": "Job runner error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "candlescyther"
+        ],
+        "summary": "Delete stock.",
+        "operationId": "delete_stock",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Delete stock and its records"
+          },
+          "400": {
+            "description": "Ticker is required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Database error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/trigger/all": {
+      "get": {
+        "tags": [
+          "candlescyther"
+        ],
+        "summary": "Trigger update of all.",
+        "description": "Returns.",
+        "operationId": "update_all",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Trigger is init."
+          },
+          "400": {
+            "description": "Missing code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Database error",
             "content": {
               "application/json": {
                 "schema": {
@@ -341,6 +461,7 @@
         "type": "string",
         "enum": [
           "CreateStock",
+          "DeleteStock",
           "CrawlPrice",
           "CrawlTest",
           "ComputeSignal"
@@ -444,6 +565,75 @@
           },
           "ticker": {
             "type": "string"
+          }
+        }
+      },
+      "Stock": {
+        "type": "object",
+        "required": [
+          "ticker",
+          "realname",
+          "market"
+        ],
+        "properties": {
+          "debt": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "margin": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "market": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "net": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "pb": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "pe": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "realname": {
+            "type": "string"
+          },
+          "revenue": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "ticker": {
+            "type": "string"
+          },
+          "total_cap": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
           }
         }
       }

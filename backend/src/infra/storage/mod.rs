@@ -16,7 +16,7 @@ impl Database {
     pub async fn new() -> Result<Database, anyhow::Error> {
         let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
 
-        // FIX: clean up
+        // FIX: clean up this logic and hardcode
         let db_filepath = "./db/database.db";
         match env::var("RESET_DB") {
             Ok(_) => {
@@ -53,17 +53,6 @@ impl Database {
             .await?;
 
         sqlx::migrate!("./migrations").run(&pool).await?;
-
-        if let Err(e) = sqlx::query!(
-            "INSERT INTO users (user_name, user_role) VALUES (?, ?)",
-            "ocean",
-            "admin"
-        )
-        .execute(&pool)
-        .await
-        {
-            tracing::error!("Failed to insert ocean user: {}", e);
-        }
 
         info!("Database initialized");
 

@@ -9,6 +9,7 @@ pub trait DomainRepository: Send + Sync {
     async fn create_stock(&self, stock: Stock) -> Result<(), anyhow::Error>;
     async fn get_stock(&self, ticker: &str) -> Result<Stock, anyhow::Error>;
     async fn get_stock_all(&self) -> Result<Vec<Stock>, anyhow::Error>;
+    async fn delete_stock(&self, ticker: &str) -> Result<(), anyhow::Error>;
 
     async fn create_klines(&self, ticker: &str, klines: &[Kline]) -> Result<(), anyhow::Error>;
     async fn get_klines(&self, ticker: &str) -> Result<Vec<Kline>, anyhow::Error>;
@@ -16,4 +17,5 @@ pub trait DomainRepository: Send + Sync {
     async fn create_signals(&self, signal: Signal) -> Result<(), anyhow::Error>;
     async fn get_signals(&self, ticker: &str) -> Result<Signal, anyhow::Error>;
     async fn get_signals_all(&self) -> Result<Vec<Signal>, anyhow::Error>;
+    async fn get_signals_all_us(&self) -> Result<Vec<Signal>, anyhow::Error>;
 }

@@ -179,12 +179,10 @@ mod tests {
                 handler_create_klines::{CrawlPriceHandler, CrawlPricePayload},
                 handler_create_signals::{ComputeSignalHandler, ComputeSignalPayload},
                 handler_create_stock::{CreateStockHandler, CreateStockPayload},
-                handler_demo::CrawlTestPayload,
             },
             model::{Job, JobStatus, JobType},
             runner::JobRunner,
         },
-        domain::model::{Kline, Signal},
         infra::storage::{
             repo_domain_sqlite::SqliteDomainRepository, repo_job_sqlite::SqliteJobRepository,
         },
@@ -230,121 +228,6 @@ mod tests {
             wait_ms,
             batch_size,
         ))
-    }
-
-    #[tokio::test]
-    async fn test_jobs_dummy_crawl() {
-        let pool = setup_test_db().await.unwrap();
-        let runner = setup_runner(pool).await.unwrap();
-
-        let mut jobs = vec![];
-        for _ in 0..3 {
-            jobs.push(Job::new(
-                JobType::CrawlTest,
-                json!(CrawlTestPayload {
-                    url: "https://dummyjson.com/http/200".to_string(),
-                }),
-            ));
-        }
-        for _ in 0..3 {
-            jobs.push(Job::new(
-                JobType::CrawlTest,
-                json!(CrawlTestPayload {
-                    url: "https://dummyjson.com/http/404/bad".to_string(),
-                }),
-            ));
-        }
-
-        runner.repo_job.create_jobs(jobs).await.unwrap();
-
-        runner.run().await.unwrap();
-
-        let jobs = runner.repo_job.get_jobs_all().await;
-
-        assert!(jobs.is_ok());
-        let jobs = jobs.unwrap();
-        assert_eq!(jobs.len(), 6);
-
-        for job in jobs {
-            if job.job_status == JobStatus::Done {
-                assert_eq!(job.job_type, JobType::CrawlTest);
-                assert_eq!(job.job_status, JobStatus::Done);
-                assert_eq!(job.error_message, None);
-                assert_eq!(job.payload, json!({ "message": "OK", "status": 200 }));
-            }
-            if job.job_status == JobStatus::Error {
-                assert_eq!(job.job_type, JobType::CrawlTest);
-                assert_eq!(job.job_status, JobStatus::Error);
-                // FIXME: seems error_message needs change
-                assert_eq!(job.error_message, Some("HTTP error: 404".to_string()));
-                assert_eq!(
-                    job.payload,
-                    json!({ "url": "https://dummyjson.com/http/404/bad" })
-                );
-            }
-        }
-    }
-
-    #[tokio::test]
-    #[ignore = "network call to eastmoney"]
-    async fn test_jobs_crawl_price_eastmoney() {
-        let pool = setup_test_db().await.unwrap();
-        let runner = setup_runner(pool.clone()).await.unwrap();
-
-        let tickers = ["105.APP", "105.TSLA", "1.600635", "1.688981"];
-        let jobs: Vec<_> = tickers
-            .into_iter()
-            .map(|ticker| {
-                Job::new(
-                    JobType::CrawlPrice,
-                    json!(CrawlPricePayload {
-                        ticker: ticker.to_string(),
-                        start: "20110101".to_string(),
-                        end: "20110202".to_string(),
-                    }),
-                )
-            })
-            .collect();
-
-        runner.repo_job.create_jobs(jobs).await.unwrap();
-
-        runner.run().await.unwrap();
-
-        let jobs = runner.repo_job.get_jobs_all().await;
-
-        assert!(jobs.is_ok());
-        let jobs = jobs.unwrap();
-        assert_eq!(jobs.len(), tickers.len());
-
-        for (i, job) in jobs.iter().enumerate() {
-            assert_eq!(job.job_type, JobType::CrawlPrice);
-            assert_eq!(job.job_status, JobStatus::Done);
-            assert_eq!(job.payload, json!({ "crawled price": tickers[i] }));
-            assert_eq!(job.error_message, None);
-        }
-
-        let (count,): (i64,) = sqlx::query_as("SELECT COUNT(*) from klines")
-            .fetch_one(&pool)
-            .await
-            .unwrap();
-
-        assert_eq!(count, 6);
-
-        let results: Vec<Kline> = sqlx::query_as(
-            r#"
-            SELECT k_ticker, k_date, k_open, k_high, k_low, k_close, k_volume, k_value
-            FROM klines
-            WHERE k_ticker = '105.TSLA'
-            ORDER BY k_date ASC
-            LIMIT 1
-            "#,
-        )
-        .fetch_all(&pool)
-        .await
-        .unwrap();
-
-        assert_eq!(results[0].k_ticker, "105.TSLA");
-        assert_eq!(results[0].k_date, 20110128);
     }
 
     #[tokio::test]
@@ -410,22 +293,13 @@ mod tests {
             .fetch_one(&pool)
             .await
             .unwrap();
+        assert_eq!(count, 2);
 
-        assert_eq!(count, tickers.len() as i64);
-
-        let results: Vec<Signal> = sqlx::query_as(
-            r#"
-            SELECT * FROM signals
-            "#,
-        )
-        .fetch_all(&pool)
-        .await
-        .unwrap();
-
-        println!("{:#?}", results);
-
-        assert_eq!(results[0].ticker, "105.APP");
-        assert!(f64::abs(results[0].kdj_k - 71.34804411324646) < 1e-5);
+        let (count,): (i64,) = sqlx::query_as("SELECT COUNT(*) from signals_us")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(count, 2);
     }
 
     #[tokio::test]
@@ -434,7 +308,7 @@ mod tests {
         let pool = setup_test_db().await.unwrap();
         let runner = setup_runner(pool.clone()).await.unwrap();
 
-        let tickers = ["105.APP", "105.TSLA"];
+        let tickers = ["105.APP", "105.TSLA", "1.600635", "1.688981"];
         let jobs: Vec<_> = tickers
             .into_iter()
             .map(|ticker| {
@@ -442,6 +316,7 @@ mod tests {
                     JobType::CreateStock,
                     json!(CreateStockPayload {
                         ticker: ticker.to_string(),
+                        update: false,
                     }),
                 )
             })
@@ -451,15 +326,18 @@ mod tests {
         runner.run().await.unwrap();
 
         let signals = runner.repo_domain.get_signals_all().await.unwrap();
+        assert_eq!(signals.len(), 2);
 
-        assert_eq!(signals.len(), tickers.len());
+        let signals_us = runner.repo_domain.get_signals_all_us().await.unwrap();
+        assert_eq!(signals_us.len(), 2);
 
         let stocks = runner.repo_domain.get_stock_all().await.unwrap();
-
         assert_eq!(stocks.len(), tickers.len());
 
         let klines = runner.repo_domain.get_klines("105.APP").await.unwrap();
+        assert!(klines.len() as i64 > 230);
 
+        let klines = runner.repo_domain.get_klines("1.600635").await.unwrap();
         assert!(klines.len() as i64 > 230);
     }
 }

@@ -17,6 +17,7 @@ use crate::{
 
 // ---------------------------------------------------------------
 // Create Stock
+// NOTE: extra flag on DELETE existing records for update purpose.
 // - (ticker) -> crawl meta and save
 // - (ticker) -> crawl klines and save
 // - (ticker) -> compute signals and save
@@ -30,6 +31,7 @@ pub struct CreateStockHandler {
 #[derive(Serialize, Deserialize)]
 pub struct CreateStockPayload {
     pub ticker: String,
+    pub update: bool,
 }
 
 #[async_trait]
@@ -43,8 +45,37 @@ impl JobHandler for CreateStockHandler {
         let payload: CreateStockPayload =
             serde_json::from_value(job.payload.clone()).map_err(JobError::Serialization)?;
 
+        let mut check_skip = true;
+
+        // NOTE: If update, delete all records per ticker.
+        if payload.update {
+            // NOTE: This delete all records related to the ticker.
+            self.repo.delete_stock(&payload.ticker).await?;
+            check_skip = false;
+        }
+
+        // NOTE: Else, skip the job if ticker exists in stocks table.
+        // `ticker` is indexed so it's fast lookup. e.g. 105.TSLA
+        // (SELECT 1 FROM table_name WHERE column_name = ? LIMIT 1;)
+        if check_skip
+            && self
+                .repo
+                .get_stock(&payload.ticker)
+                .await
+                .is_ok_and(|s| s.ticker == payload.ticker)
+        {
+            return Ok(JobResult {
+                success: true,
+                output: Some(serde_json::json!({
+                    "job skipped for ticker already exists": format!("{}", payload.ticker),
+                })),
+                error: None,
+            });
+        }
+
         // Step 1: crawl stock meta.
         // FIX: put url into data/ as a Entity with new or sth
+        // allow more config on crawling
         let stock = match crawl_stock_eastmoney(UrlStockEastmoney::new(&payload.ticker)).await {
             Ok(stock) => stock,
             Err(e) => {
@@ -89,7 +120,7 @@ impl JobHandler for CreateStockHandler {
         Ok(JobResult {
             success: true,
             output: Some(serde_json::json!({
-                "crawled price": format!("{}", payload.ticker),
+                "created stock": format!("{}", payload.ticker),
             })),
             error: None,
         })

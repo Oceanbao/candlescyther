@@ -17,7 +17,7 @@ use crate::{
         handlers::handler_create_stock::CreateStockPayload,
         model::{Job, JobType},
     },
-    domain::model::{Kline, Signal, User},
+    domain::model::{Kline, Signal, Stock, User},
     infra::{
         http::AppState,
         logging::{LogEntry, LogLevel, logit},
@@ -46,10 +46,12 @@ pub fn create_routes_api(app_state: AppState) -> OpenApiRouter {
         .routes(routes!(list_jobs))
         // /signals
         .routes(routes!(list_signals))
-        // /stocks POST
-        .routes(routes!(create_stocks))
+        // /stocks GET, POST, DELETE
+        .routes(routes!(create_stocks, list_stocks, delete_stock))
         // /klines?ticker=a
         .routes(routes!(list_klines))
+        // /trigger/all
+        .routes(routes!(update_all))
         .with_state(app_state)
 }
 
@@ -184,7 +186,42 @@ pub async fn list_signals(State(state): State<AppState>) -> impl IntoResponse {
     }
 }
 
-/// Crawl all tickers for klines.
+/// List all stocks.
+///
+/// Returns all stocks.
+#[utoipa::path(
+    get,
+    path = "/stocks",
+    tag = "candlescyther",
+    responses(
+        (status = 200, description = "List all stocks from stocks table.", body = [Stock]),
+        (status = 500, description = "Database error", body = ApiError)
+    )
+)]
+pub async fn list_stocks(State(state): State<AppState>) -> impl IntoResponse {
+    match state.runner.repo_domain.get_stock_all().await {
+        Ok(stocks) => (StatusCode::OK, Json(stocks)).into_response(),
+        Err(e) => {
+            logit(
+                &state,
+                LogEntry::new(
+                    LogLevel::Error,
+                    format!("failed to query database {}", e),
+                    "http/handlers.rs",
+                    211,
+                ),
+            )
+            .await;
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiError::DatabaseError(e.to_string())),
+            )
+                .into_response()
+        }
+    }
+}
+
+/// Create stocks with meta,klines,signals.
 ///
 /// Returns a 200 if the job is submitted.
 #[utoipa::path(
@@ -223,6 +260,7 @@ pub async fn create_stocks(
             JobType::CreateStock,
             json!(CreateStockPayload {
                 ticker: ticker.to_string(),
+                update: false,
             }),
         ));
     }
@@ -280,6 +318,58 @@ where
 {
     let s = String::deserialize(deserializer)?;
     Ok(s.split(',').map(|s| s.trim().to_string()).collect())
+}
+
+/// Delete stock.
+#[utoipa::path(
+    delete,
+    path = "/stocks",
+    params(
+        DeleteStockQuery,
+    ),
+    tag = "candlescyther",
+    responses(
+        (status = 200, description = "Delete stock and its records"),
+        (status = 400, description = "Ticker is required", body = ApiError),
+        (status = 500, description = "Database error", body = ApiError)
+    )
+)]
+pub async fn delete_stock(
+    State(state): State<AppState>,
+    query: Query<DeleteStockQuery>,
+) -> impl IntoResponse {
+    if query.ticker.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiError::MissingInput("missing param".to_string())),
+        )
+            .into_response();
+    }
+    match state.runner.repo_domain.delete_stock(&query.ticker).await {
+        Ok(_) => (StatusCode::OK).into_response(),
+        Err(e) => {
+            logit(
+                &state,
+                LogEntry::new(
+                    LogLevel::Error,
+                    format!("failed to query database {}", e),
+                    "http/handlers.rs",
+                    211,
+                ),
+            )
+            .await;
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiError::DatabaseError(e.to_string())),
+            )
+                .into_response()
+        }
+    }
+}
+
+#[derive(Deserialize, IntoParams)]
+pub struct DeleteStockQuery {
+    ticker: String,
 }
 
 /// List all klines per ticker.
@@ -341,4 +431,96 @@ pub async fn list_klines(
 #[derive(Deserialize, IntoParams)]
 pub struct KlineQuery {
     pub ticker: String,
+}
+
+/// Trigger update of all.
+///
+/// Returns.
+#[utoipa::path(
+    get,
+    path = "/trigger/all",
+    tag = "candlescyther",
+    params(
+        TriggerQuery,
+    ),
+    responses(
+        (status = 200, description = "Trigger is init."),
+        (status = 400, description = "Missing code", body = ApiError),
+        (status = 500, description = "Database error", body = ApiError)
+    )
+)]
+pub async fn update_all(
+    State(state): State<AppState>,
+    query: Query<TriggerQuery>,
+) -> impl IntoResponse {
+    // FIX: refine security
+    if query.code.is_empty() || query.code != "1l0veu" {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiError::MissingInput("missing code".to_string())),
+        )
+            .into_response();
+    }
+
+    let tickers: Vec<String> = match state.runner.repo_domain.get_stock_all().await {
+        Ok(tickers) => tickers.iter().map(|t| t.ticker.clone()).collect(),
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiError::DatabaseError(e.to_string())),
+            )
+                .into_response();
+        }
+    };
+
+    let mut jobs = vec![];
+    for ticker in &tickers {
+        jobs.push(Job::new(
+            JobType::CreateStock,
+            json!(CreateStockPayload {
+                ticker: ticker.to_string(),
+                update: true,
+            }),
+        ));
+    }
+
+    if let Err(e) = state.runner.repo_job.create_jobs(jobs).await {
+        logit(
+            &state,
+            LogEntry::new(
+                LogLevel::Error,
+                "failed to create_jobs in update_all",
+                "http/handlers.rs",
+                491,
+            ),
+        )
+        .await;
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiError::RunnerError(e.to_string())),
+        )
+            .into_response();
+    }
+
+    tokio::spawn(async move {
+        if let Err(e) = state.runner.run().await {
+            logit(
+                &state,
+                LogEntry::new(
+                    LogLevel::Error,
+                    format!("runner error: {}", e),
+                    "http/handlers.rs",
+                    510,
+                ),
+            )
+            .await;
+        }
+    });
+
+    (StatusCode::OK).into_response()
+}
+
+#[derive(Deserialize, IntoParams)]
+pub struct TriggerQuery {
+    pub code: String,
 }

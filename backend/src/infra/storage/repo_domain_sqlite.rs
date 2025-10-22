@@ -47,6 +47,7 @@ impl DomainRepository for SqliteDomainRepository {
             SELECT *
             FROM stocks
             WHERE ticker = ?
+            LIMIT 1
         "#,
             ticker
         )
@@ -70,12 +71,34 @@ impl DomainRepository for SqliteDomainRepository {
         Ok(stocks)
     }
 
-    // NOTE: Restricted to a single ticker.
-    async fn create_klines(&self, ticker: &str, klines: &[Kline]) -> Result<(), anyhow::Error> {
-        // NOTE: Clear all records per tickers.
+    async fn delete_stock(&self, ticker: &str) -> Result<(), anyhow::Error> {
+        sqlx::query!("DELETE FROM stocks WHERE ticker = ?", ticker)
+            .execute(&self.pool)
+            .await?;
         sqlx::query!("DELETE FROM klines WHERE k_ticker = ?", ticker)
             .execute(&self.pool)
             .await?;
+        sqlx::query!("DELETE FROM signals WHERE ticker = ?", ticker)
+            .execute(&self.pool)
+            .await?;
+
+        Ok(())
+    }
+
+    // NOTE: Restricted to a single ticker.
+    async fn create_klines(&self, ticker: &str, klines: &[Kline]) -> Result<(), anyhow::Error> {
+        let is_us = is_us(ticker);
+
+        // NOTE: Clear all records per tickers.
+        if is_us {
+            sqlx::query!("DELETE FROM klines_us WHERE k_ticker = ?", ticker)
+                .execute(&self.pool)
+                .await?;
+        } else {
+            sqlx::query!("DELETE FROM klines WHERE k_ticker = ?", ticker)
+                .execute(&self.pool)
+                .await?;
+        }
 
         let batch_size = 5000;
         let chunks: Vec<Vec<Kline>> = klines
@@ -87,9 +110,10 @@ impl DomainRepository for SqliteDomainRepository {
             let tx = self.pool.begin().await?;
 
             // Batch commit.
-            for kline in chunk {
-                sqlx::query!(
-                "INSERT INTO klines (k_ticker, k_date, k_open, k_high, k_low, k_close, k_volume, k_value) 
+            if is_us {
+                for kline in chunk {
+                    sqlx::query!(
+                "INSERT INTO klines_us (k_ticker, k_date, k_open, k_high, k_low, k_close, k_volume, k_value) 
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 kline.k_ticker,
                 kline.k_date,
@@ -102,6 +126,23 @@ impl DomainRepository for SqliteDomainRepository {
             )
             .execute(&self.pool)
             .await?;
+                }
+            } else {
+                for kline in chunk {
+                    sqlx::query!(
+                        "INSERT INTO klines (k_ticker, k_date, k_open, k_high, k_low, k_close, k_volume, k_value) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                        kline.k_ticker,
+                        kline.k_date,
+                        kline.k_open,
+                        kline.k_high,
+                        kline.k_low,
+                        kline.k_close,
+                        kline.k_volume,
+                        kline.k_value,
+                    )
+                        .execute(&self.pool)
+                    .await?;
+                }
             }
 
             tx.commit().await?;
@@ -111,31 +152,63 @@ impl DomainRepository for SqliteDomainRepository {
     }
 
     async fn get_klines(&self, ticker: &str) -> Result<Vec<Kline>, anyhow::Error> {
-        let klines = sqlx::query_as!(
-            Kline,
-            r#"
+        let is_us = is_us(ticker);
+
+        if is_us {
+            let klines = sqlx::query_as!(
+                Kline,
+                r#"
+            SELECT *
+            FROM klines_us
+            WHERE k_ticker = ?
+        "#,
+                ticker
+            )
+            .fetch_all(&self.pool)
+            .await?;
+
+            Ok(klines)
+        } else {
+            let klines = sqlx::query_as!(
+                Kline,
+                r#"
             SELECT *
             FROM klines
             WHERE k_ticker = ?
         "#,
-            ticker
-        )
-        .fetch_all(&self.pool)
-        .await?;
+                ticker
+            )
+            .fetch_all(&self.pool)
+            .await?;
 
-        Ok(klines)
+            Ok(klines)
+        }
     }
 
     async fn create_signals(&self, signal: Signal) -> Result<(), anyhow::Error> {
-        sqlx::query_as!(
-            Signal,
-            "INSERT INTO signals (ticker, kdj_k, kdj_d) VALUES (?, ?, ?)",
-            signal.ticker,
-            signal.kdj_k,
-            signal.kdj_d,
-        )
-        .execute(&self.pool)
-        .await?;
+        let is_us = is_us(&signal.ticker);
+
+        if is_us {
+            sqlx::query_as!(
+                Signal,
+                "INSERT INTO signals_us (ticker, kdj_k, kdj_d) VALUES (?, ?, ?)",
+                signal.ticker,
+                signal.kdj_k,
+                signal.kdj_d,
+            )
+            .execute(&self.pool)
+            .await?;
+        } else {
+            sqlx::query_as!(
+                Signal,
+                "INSERT INTO signals (ticker, kdj_k, kdj_d) VALUES (?, ?, ?)",
+                signal.ticker,
+                signal.kdj_k,
+                signal.kdj_d,
+            )
+            .execute(&self.pool)
+            .await?;
+        }
 
         Ok(())
     }
@@ -169,8 +242,30 @@ impl DomainRepository for SqliteDomainRepository {
 
         Ok(signals)
     }
+
+    async fn get_signals_all_us(&self) -> Result<Vec<Signal>, anyhow::Error> {
+        let signals = sqlx::query_as!(
+            Signal,
+            r#"
+            SELECT *
+            FROM signals_us
+        "#
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(signals)
+    }
 }
 
+fn is_us(ticker: &str) -> bool {
+    let idx = ticker.find('.').unwrap();
+    let num = &ticker[..idx];
+    let n = num.parse::<u32>().unwrap();
+    (100..=110).contains(&n)
+}
+
+// FIX: more test coverage no need network call.
 #[cfg(test)]
 mod tests {
     use sqlx::{SqlitePool, sqlite::SqlitePoolOptions};
@@ -235,7 +330,7 @@ mod tests {
             repo.create_klines(ticker, &klines[idx]).await.unwrap();
         }
 
-        let (count,): (i64,) = sqlx::query_as("SELECT COUNT(*) from klines")
+        let (count,): (i64,) = sqlx::query_as("SELECT COUNT(*) from klines_us")
             .fetch_one(&pool)
             .await
             .unwrap();
@@ -247,7 +342,7 @@ mod tests {
             repo.create_klines(ticker, &klines[idx]).await.unwrap();
         }
 
-        let (count,): (i64,) = sqlx::query_as("SELECT COUNT(*) from klines")
+        let (count,): (i64,) = sqlx::query_as("SELECT COUNT(*) from klines_us")
             .fetch_one(&pool)
             .await
             .unwrap();
