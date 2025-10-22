@@ -203,20 +203,22 @@ impl DomainRepository for SqliteDomainRepository {
         if is_us {
             sqlx::query_as!(
                 Signal,
-                "INSERT INTO signals_us (ticker, kdj_k, kdj_d) VALUES (?, ?, ?)",
+                "INSERT INTO signals_us (ticker, kdj_k, kdj_d, boll_dist) VALUES (?, ?, ?, ?)",
                 signal.ticker,
                 signal.kdj_k,
                 signal.kdj_d,
+                signal.boll_dist,
             )
             .execute(&self.pool)
             .await?;
         } else {
             sqlx::query_as!(
                 Signal,
-                "INSERT INTO signals (ticker, kdj_k, kdj_d) VALUES (?, ?, ?)",
+                "INSERT INTO signals (ticker, kdj_k, kdj_d, boll_dist) VALUES (?, ?, ?, ?)",
                 signal.ticker,
                 signal.kdj_k,
                 signal.kdj_d,
+                signal.boll_dist,
             )
             .execute(&self.pool)
             .await?;

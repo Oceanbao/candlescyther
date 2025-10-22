@@ -9,7 +9,7 @@ use crate::domain::model::{KDJ, Kline};
 ///
 /// # Returns
 /// A vector of `KDJ` values, one for each input bar.
-pub fn compute_kdj(klines: Vec<Kline>) -> Vec<KDJ> {
+pub fn compute_kdj(klines: &[Kline]) -> Vec<KDJ> {
     let (closes, highs, lows) = destuct_klines(klines);
 
     let len = closes.len();
@@ -97,8 +97,59 @@ pub fn compute_kdj(klines: Vec<Kline>) -> Vec<KDJ> {
     kdjs
 }
 
+/// Computes the Bollinger Bands indicator for a series of klines.
+///
+/// # Arguments
+/// * `Klines` - Slice of candles (must be in chronological order).
+///
+/// # Returns
+/// A vector of `KDJ` values, one for each input bar.
+pub fn compute_boll_dist(klines: &[Kline]) -> f64 {
+    let period = 20;
+    let num_std_dev = 2;
+    let (closes, _, _) = destuct_klines(klines);
+    let n = closes.len();
+    let mut upper_band = vec![0.0; n];
+    let mut middle_band = vec![0.0; n];
+    let mut lower_band = vec![0.0; n];
+
+    let mut final_std_dev = 0.0;
+
+    for i in 0..n {
+        if i < period - 1 {
+            upper_band[i] = closes[i];
+            middle_band[i] = closes[i];
+            lower_band[i] = closes[i];
+            continue;
+        }
+
+        // Extract the slice for the current window
+        let start = i as i64 - period as i64 + 1;
+        let end = i + 1;
+        let sliced_data = &closes[start as usize..end];
+
+        // Calculate the simple moving average (middle band)
+        let sum: f64 = sliced_data.iter().sum();
+        let middle = sum / period as f64;
+
+        // Calculate the standard deviation
+        let variance_sum: f64 = sliced_data.iter().map(|&x| (x - middle).powi(2)).sum();
+        let std_dev = (variance_sum / period as f64).sqrt();
+
+        final_std_dev = std_dev;
+
+        middle_band[i] = middle;
+        upper_band[i] = middle + (num_std_dev as f64) * std_dev;
+        lower_band[i] = middle - (num_std_dev as f64) * std_dev;
+    }
+
+    println!("last BOLL lower: {}", lower_band.last().unwrap());
+
+    (closes.last().unwrap() - lower_band.last().unwrap()) / final_std_dev
+}
+
 /// Extract `Vec<Kline>` into a tuple of 'closes', 'highs', 'lows'.
-fn destuct_klines(klines: Vec<Kline>) -> (Vec<f64>, Vec<f64>, Vec<f64>) {
+fn destuct_klines(klines: &[Kline]) -> (Vec<f64>, Vec<f64>, Vec<f64>) {
     let mut closes = vec![0.0; klines.len()];
     let mut highs = vec![0.0; klines.len()];
     let mut lows = vec![0.0; klines.len()];
@@ -117,8 +168,6 @@ mod tests {
     use std::fs;
 
     use serde::{Deserialize, Serialize};
-
-    // use crate::infra::data::crawler::{create_kline_eastmoney, parse_raw_price_eastmoney};
 
     use super::*;
 
@@ -175,7 +224,7 @@ mod tests {
         let candles = load_candles();
         let klines = candles_to_klines(candles);
 
-        let kdjs = compute_kdj(klines.clone());
+        let kdjs = compute_kdj(&klines);
 
         let kdj_gold = load_kdj_gold();
 
@@ -201,5 +250,17 @@ mod tests {
     //         assert!(approx_equal(kdj_gold.k[index], kdjs[index].k, 1e-4));
     //         assert!(approx_equal(kdj_gold.d[index], kdjs[index].d, 1e-4));
     //     }
+    // }
+
+    // #[tokio::test]
+    // async fn test_boll_dist_real_case() {
+    //     let klines =
+    //         crawl_kline_eastmoney(UrlKlineEastmoney::new("105.AMZN", "20200101", "20500101"))
+    //             .await
+    //             .unwrap();
+    //
+    //     let boll_dist = compute_boll_dist(&klines);
+    //
+    //     assert_eq!(boll_dist, 1.0);
     // }
 }

@@ -8,7 +8,11 @@ use crate::{
         handlers::JobHandler,
         model::{Job, JobError, JobResult, JobType},
     },
-    domain::{model::Signal, repository::DomainRepository, service_signal::compute_kdj},
+    domain::{
+        model::Signal,
+        repository::DomainRepository,
+        service_signal::{compute_boll_dist, compute_kdj},
+    },
     infra::data::{
         kline::{UrlKlineEastmoney, crawl_kline_eastmoney},
         stock::{UrlStockEastmoney, crawl_stock_eastmoney},
@@ -107,12 +111,14 @@ impl JobHandler for CreateStockHandler {
         self.repo.create_klines(&payload.ticker, &klines).await?;
 
         // Step 3: compute signals from klines.
-        let kdjs = compute_kdj(klines);
+        let kdjs = compute_kdj(&klines);
         let last_kdj = kdjs.last().unwrap();
+        let boll_dist = compute_boll_dist(&klines);
         let signal = Signal {
             ticker: payload.ticker.clone(),
             kdj_k: last_kdj.k,
             kdj_d: last_kdj.d,
+            boll_dist,
         };
 
         self.repo.create_signals(signal).await?;

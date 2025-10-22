@@ -41,6 +41,7 @@ pub struct Signal {
     pub ticker: String,
     pub kdj_k: f64,
     pub kdj_d: f64,
+    pub boll_dist: f64,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -48,4 +49,11 @@ pub struct KDJ {
     pub k: f64,
     pub d: f64,
     pub j: f64,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct BOLL {
+    pub upper: f64,
+    pub middle: f64,
+    pub lower: f64,
 }
