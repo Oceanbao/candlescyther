@@ -30,6 +30,22 @@ export const getSignals = query(async () => {
 	};
 });
 
+export const getSignalsUs = query(async () => {
+	let { data, error: apiError } = await server.GET('/api/signals-us');
+
+	return {
+		data: data ?? []
+	};
+});
+
+export const getStocks = query(async () => {
+	let { data, error: apiError } = await server.GET('/api/stocks');
+
+	return {
+		data: data ?? []
+	};
+});
+
 export const getJobs = query(async () => {
 	let { data, error: apiError } = await server.GET('/api/jobs');
 
@@ -52,5 +68,4 @@ export const createStocks = command(z.string(), async (tickers) => {
 			tickers
 		}
 	});
-	console.log(res);
 });

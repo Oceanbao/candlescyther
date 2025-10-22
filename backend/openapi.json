@@ -169,6 +169,41 @@
         }
       }
     },
+    "/api/signals-us": {
+      "get": {
+        "tags": [
+          "candlescyther"
+        ],
+        "summary": "List all signals for US stocks.",
+        "description": "Returns all signals.",
+        "operationId": "list_signals_us",
+        "responses": {
+          "200": {
+            "description": "List all signals from signals table.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Signal"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Database error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/stocks": {
       "get": {
         "tags": [
@@ -463,7 +498,6 @@
           "CreateStock",
           "DeleteStock",
           "CrawlPrice",
-          "CrawlTest",
           "ComputeSignal"
         ]
       },

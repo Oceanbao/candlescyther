@@ -46,6 +46,8 @@ pub fn create_routes_api(app_state: AppState) -> OpenApiRouter {
         .routes(routes!(list_jobs))
         // /signals
         .routes(routes!(list_signals))
+        // /signals-us
+        .routes(routes!(list_signals_us))
         // /stocks GET, POST, DELETE
         .routes(routes!(create_stocks, list_stocks, delete_stock))
         // /klines?ticker=a
@@ -165,6 +167,41 @@ pub async fn list_logs(State(state): State<AppState>) -> impl IntoResponse {
 )]
 pub async fn list_signals(State(state): State<AppState>) -> impl IntoResponse {
     match state.runner.repo_domain.get_signals_all().await {
+        Ok(signals) => (StatusCode::OK, Json(signals)).into_response(),
+        Err(e) => {
+            logit(
+                &state,
+                LogEntry::new(
+                    LogLevel::Error,
+                    format!("failed to query database {}", e),
+                    "http/handlers.rs",
+                    141,
+                ),
+            )
+            .await;
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiError::DatabaseError(e.to_string())),
+            )
+                .into_response()
+        }
+    }
+}
+
+/// List all signals for US stocks.
+///
+/// Returns all signals.
+#[utoipa::path(
+    get,
+    path = "/signals-us",
+    tag = "candlescyther",
+    responses(
+        (status = 200, description = "List all signals from signals table.", body = [Signal]),
+        (status = 500, description = "Database error", body = ApiError)
+    )
+)]
+pub async fn list_signals_us(State(state): State<AppState>) -> impl IntoResponse {
+    match state.runner.repo_domain.get_signals_all_us().await {
         Ok(signals) => (StatusCode::OK, Json(signals)).into_response(),
         Err(e) => {
             logit(

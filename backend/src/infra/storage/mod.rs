@@ -16,21 +16,6 @@ impl Database {
     pub async fn new() -> Result<Database, anyhow::Error> {
         let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
 
-        // FIX: clean up this logic and hardcode
-        let db_filepath = "./db/database.db";
-        match env::var("RESET_DB") {
-            Ok(_) => {
-                // Delete the existing database file
-                if std::path::Path::new(db_filepath).exists() {
-                    std::fs::remove_file(db_filepath)?;
-                    info!("Deleted existing database file: {}", db_filepath);
-                }
-            }
-            Err(_) => {
-                info!("RESET_DB is not set.");
-            }
-        }
-
         match sqlx::Sqlite::database_exists(&database_url).await {
             Ok(exist) => {
                 if !exist {

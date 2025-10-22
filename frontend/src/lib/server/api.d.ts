@@ -84,6 +84,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/signals-us": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List all signals for US stocks.
+         * @description Returns all signals.
+         */
+        get: operations["list_signals_us"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/stocks": {
         parameters: {
             query?: never;
@@ -91,13 +111,38 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * List all stocks.
+         * @description Returns all stocks.
+         */
+        get: operations["list_stocks"];
         put?: never;
         /**
-         * Crawl all tickers for klines.
+         * Create stocks with meta,klines,signals.
          * @description Returns a 200 if the job is submitted.
          */
         post: operations["create_stocks"];
+        /** Delete stock. */
+        delete: operations["delete_stock"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/trigger/all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Trigger update of all.
+         * @description Returns.
+         */
+        get: operations["update_all"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -135,7 +180,7 @@ export interface components {
         /** @enum {string} */
         JobStatus: "Pending" | "Running" | "Done" | "Error";
         /** @enum {string} */
-        JobType: "CreateStock" | "CrawlPrice" | "CrawlTest" | "ComputeSignal";
+        JobType: "CreateStock" | "DeleteStock" | "CrawlPrice" | "ComputeSignal";
         Kline: {
             /** Format: double */
             k_close: number;
@@ -170,6 +215,26 @@ export interface components {
             /** Format: double */
             kdj_k: number;
             ticker: string;
+        };
+        Stock: {
+            /** Format: double */
+            debt?: number | null;
+            /** Format: double */
+            margin?: number | null;
+            /** Format: int64 */
+            market: number;
+            /** Format: double */
+            net?: number | null;
+            /** Format: double */
+            pb?: number | null;
+            /** Format: double */
+            pe?: number | null;
+            realname: string;
+            /** Format: double */
+            revenue?: number | null;
+            ticker: string;
+            /** Format: double */
+            total_cap?: number | null;
         };
     };
     responses: never;
@@ -307,6 +372,64 @@ export interface operations {
             };
         };
     };
+    list_signals_us: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List all signals from signals table. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Signal"][];
+                };
+            };
+            /** @description Database error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    list_stocks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List all stocks from stocks table. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Stock"][];
+                };
+            };
+            /** @description Database error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
     create_stocks: {
         parameters: {
             query?: never;
@@ -337,6 +460,82 @@ export interface operations {
                 };
             };
             /** @description Job runner error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    delete_stock: {
+        parameters: {
+            query: {
+                ticker: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Delete stock and its records */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Ticker is required */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Database error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    update_all: {
+        parameters: {
+            query: {
+                code: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Trigger is init. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing code */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Database error */
             500: {
                 headers: {
                     [name: string]: unknown;

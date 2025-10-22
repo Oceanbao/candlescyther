@@ -28,13 +28,13 @@
 		},
 		navMain: [
 			{
-				title: 'Dashboard',
-				url: '/dashboard',
-				icon: DashboardIcon
+				title: 'Watchlist',
+				url: '/stocks',
+				icon: ListDetailsIcon
 			},
 			{
-				title: 'Blueocean',
-				url: '/blueocean',
+				title: 'Signals (US)',
+				url: '/signals-us',
 				icon: ListDetailsIcon
 			},
 			{
