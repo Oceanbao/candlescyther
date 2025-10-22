@@ -71,16 +71,28 @@ impl DomainRepository for SqliteDomainRepository {
         Ok(stocks)
     }
 
-    async fn delete_stock(&self, ticker: &str) -> Result<(), anyhow::Error> {
-        sqlx::query!("DELETE FROM stocks WHERE ticker = ?", ticker)
-            .execute(&self.pool)
-            .await?;
-        sqlx::query!("DELETE FROM klines WHERE k_ticker = ?", ticker)
-            .execute(&self.pool)
-            .await?;
-        sqlx::query!("DELETE FROM signals WHERE ticker = ?", ticker)
-            .execute(&self.pool)
-            .await?;
+    async fn delete_stocks(&self, tickers: &[&str]) -> Result<(), anyhow::Error> {
+        for ticker in tickers.iter() {
+            let is_us = is_us(ticker);
+            sqlx::query!("DELETE FROM stocks WHERE ticker = ?", ticker)
+                .execute(&self.pool)
+                .await?;
+            if is_us {
+                sqlx::query!("DELETE FROM klines_us WHERE k_ticker = ?", ticker)
+                    .execute(&self.pool)
+                    .await?;
+                sqlx::query!("DELETE FROM signals_us WHERE ticker = ?", ticker)
+                    .execute(&self.pool)
+                    .await?;
+            } else {
+                sqlx::query!("DELETE FROM klines WHERE k_ticker = ?", ticker)
+                    .execute(&self.pool)
+                    .await?;
+                sqlx::query!("DELETE FROM signals WHERE ticker = ?", ticker)
+                    .execute(&self.pool)
+                    .await?;
+            }
+        }
 
         Ok(())
     }

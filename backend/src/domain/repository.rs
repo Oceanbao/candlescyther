@@ -9,7 +9,7 @@ pub trait DomainRepository: Send + Sync {
     async fn create_stock(&self, stock: Stock) -> Result<(), anyhow::Error>;
     async fn get_stock(&self, ticker: &str) -> Result<Stock, anyhow::Error>;
     async fn get_stock_all(&self) -> Result<Vec<Stock>, anyhow::Error>;
-    async fn delete_stock(&self, ticker: &str) -> Result<(), anyhow::Error>;
+    async fn delete_stocks(&self, tickers: &[&str]) -> Result<(), anyhow::Error>;
 
     async fn create_klines(&self, ticker: &str, klines: &[Kline]) -> Result<(), anyhow::Error>;
     async fn get_klines(&self, ticker: &str) -> Result<Vec<Kline>, anyhow::Error>;

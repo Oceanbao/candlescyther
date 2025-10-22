@@ -50,7 +50,7 @@ impl JobHandler for CreateStockHandler {
         // NOTE: If update, delete all records per ticker.
         if payload.update {
             // NOTE: This delete all records related to the ticker.
-            self.repo.delete_stock(&payload.ticker).await?;
+            self.repo.delete_stocks(&[&payload.ticker]).await?;
             check_skip = false;
         }
 

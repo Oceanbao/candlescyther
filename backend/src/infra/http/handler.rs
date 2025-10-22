@@ -382,7 +382,11 @@ pub async fn delete_stock(
         )
             .into_response();
     }
-    match state.runner.repo_domain.delete_stock(&query.ticker).await {
+
+    let tickers: Vec<&str> = query.ticker.split(',').map(|s| s.trim()).collect();
+
+    // WARN: This is not async due to expecting small ops.
+    match state.runner.repo_domain.delete_stocks(&tickers).await {
         Ok(_) => (StatusCode::OK).into_response(),
         Err(e) => {
             logit(
