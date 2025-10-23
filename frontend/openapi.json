@@ -586,9 +586,14 @@
         "required": [
           "ticker",
           "kdj_k",
-          "kdj_d"
+          "kdj_d",
+          "boll_dist"
         ],
         "properties": {
+          "boll_dist": {
+            "type": "number",
+            "format": "double"
+          },
           "kdj_d": {
             "type": "number",
             "format": "double"

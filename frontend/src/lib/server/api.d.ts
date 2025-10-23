@@ -211,6 +211,8 @@ export interface components {
         };
         Signal: {
             /** Format: double */
+            boll_dist: number;
+            /** Format: double */
             kdj_d: number;
             /** Format: double */
             kdj_k: number;

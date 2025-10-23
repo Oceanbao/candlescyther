@@ -3,6 +3,8 @@
 	import DataTable from './table-stocks/data-table.svelte';
 	import { columns } from './table-stocks/stocks.js';
 
+	import Spinner from '$lib/components/ui/spinner/spinner.svelte';
+
 	let query = getStocks();
 </script>
 
@@ -11,7 +13,9 @@
 		{#if query.error}
 			<em>ERROR</em>
 		{:else if query.loading}
-			<em>LOADING...</em>
+			<div class="grid h-1/2 place-content-center">
+				<Spinner class="size-6" />
+			</div>
 		{:else}
 			<DataTable data={query.current?.data ?? []} {columns} />
 		{/if}

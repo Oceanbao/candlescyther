@@ -10,7 +10,9 @@
 		getCoreRowModel,
 		getPaginationRowModel,
 		getSortedRowModel,
-		getFilteredRowModel
+		getFilteredRowModel,
+		getFacetedRowModel,
+		getFacetedUniqueValues
 	} from '@tanstack/table-core';
 	import { createSvelteTable, FlexRender } from '$lib/components/ui/data-table/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
@@ -59,6 +61,8 @@
 		getPaginationRowModel: getPaginationRowModel(),
 		getSortedRowModel: getSortedRowModel(),
 		getFilteredRowModel: getFilteredRowModel(),
+		getFacetedRowModel: getFacetedRowModel(),
+		getFacetedUniqueValues: getFacetedUniqueValues(),
 		onPaginationChange: (updater) => {
 			if (typeof updater === 'function') {
 				pagination = updater(pagination);

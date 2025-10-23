@@ -3,6 +3,7 @@ import type { ColumnDef } from '@tanstack/table-core';
 import { createRawSnippet } from 'svelte';
 import DataTableActions from './data-table-actions.svelte';
 import DataTableSortButton from './data-table-sort-button.svelte';
+import DataTableFilterSelect from './data-table-filter-select.svelte';
 import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 import type { TJobs } from '$lib/server/client';
 
@@ -20,12 +21,16 @@ export type Payment = {
 export const columns: ColumnDef<TJobs>[] = [
 	{
 		accessorKey: 'job_status',
-		header: () => {
-			const headerSnippet = createRawSnippet(() => ({
-				render: () => `<div class="text-center">Job Status</div>`
-			}));
-			return renderSnippet(headerSnippet);
-		},
+		header: ({ column }) =>
+			renderComponent(DataTableFilterSelect, {
+				style: 'text-align: center; width: 100%; height: 100%;',
+				filterValue: column.getFilterValue(),
+				sortedUniqueValue: Array.from(column.getFacetedUniqueValues().keys()).sort(),
+				onSelectChange: (e: Event) => {
+					const target = e.target as HTMLSelectElement;
+					column.setFilterValue(target.value);
+				}
+			}),
 		cell: ({ row }) => {
 			// const formatter = new Intl.NumberFormat('en-US', {
 			// 	style: 'currency',

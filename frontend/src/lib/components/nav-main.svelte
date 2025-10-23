@@ -35,6 +35,7 @@
 		createStocks(tickers);
 		fetching = false;
 		fetchDone = true;
+		tickers = '';
 	}
 
 	let addTicker = $state(false);

@@ -46,6 +46,20 @@ export const getStocks = query(async () => {
 	};
 });
 
+export const deleteStock = command(z.string(), async (ticker) => {
+	let { data, error: apiError } = await server.DELETE('/api/stocks', {
+		params: {
+			query: {
+				ticker
+			}
+		}
+	});
+
+	return {
+		data: data ?? []
+	};
+});
+
 export const getJobs = query(async () => {
 	let { data, error: apiError } = await server.GET('/api/jobs');
 

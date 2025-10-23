@@ -41,6 +41,27 @@ export const columns: ColumnDef<TSignals>[] = [
 		}
 	},
 	{
+		accessorKey: 'boll_dist',
+		header: ({ column }) =>
+			renderComponent(DataTableSortButton, {
+				style: 'text-align: center; width: 100%; height: 100%;',
+				title: 'BOLL dist',
+				onclick: column.getToggleSortingHandler()
+			}),
+		cell: ({ row }) => {
+			const cellSnippet = createRawSnippet<[{ boll_dist: number }]>((getData) => {
+				const { boll_dist } = getData();
+				return {
+					render: () => `<div class="text-center">${boll_dist.toFixed(4)}</div>`
+				};
+			});
+
+			return renderSnippet(cellSnippet, {
+				boll_dist: row.original.boll_dist
+			});
+		}
+	},
+	{
 		accessorKey: 'kdj_k',
 		header: () => {
 			const headerSnippet = createRawSnippet(() => ({
@@ -62,38 +83,12 @@ export const columns: ColumnDef<TSignals>[] = [
 			});
 		}
 	},
-	// {
-	// 	accessorKey: 'payload',
-	// 	header: () => {
-	// 		const amountHeaderSnippet = createRawSnippet(() => ({
-	// 			render: () => `<div class="text-center">Payload</div>`
-	// 		}));
-	// 		return renderSnippet(amountHeaderSnippet);
-	// 	},
-	// 	cell: ({ row }) => {
-	// 		// const formatter = new Intl.NumberFormat('en-US', {
-	// 		// 	style: 'currency',
-	// 		// 	currency: 'USD'
-	// 		// });
-	//
-	// 		const payloadCellSnippet = createRawSnippet<[{ payload: string }]>((getPayload) => {
-	// 			const { payload } = getPayload();
-	// 			// const formatted = formatter.format(amount);
-	// 			return {
-	// 				render: () => `<div class="text-right font-medium">${JSON.stringify(payload)}</div>`
-	// 			};
-	// 		});
-	//
-	// 		return renderSnippet(payloadCellSnippet, {
-	// 			payload: row.original.payload as string
-	// 		});
-	// 	}
-	// },
 	{
 		accessorKey: 'kdj_d',
 		header: ({ column }) =>
 			renderComponent(DataTableSortButton, {
 				style: 'text-align: center; width: 100%; height: 100%;',
+				title: 'D',
 				onclick: column.getToggleSortingHandler()
 			}),
 		cell: ({ row }) => {
