@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getSignalsUs } from '$lib/api/api.remote';
-	import DataTable from './table-signals-us/data-table.svelte';
+	import DataTable from '$lib/components/data-table/data-table.svelte';
 	import { columns } from './table-signals-us/signals-us.js';
 	import Spinner from '$lib/components/ui/spinner/spinner.svelte';
 
@@ -16,7 +16,7 @@
 				<Spinner class="size-6" />
 			</div>
 		{:else}
-			<DataTable data={query.current?.data ?? []} {columns} />
+			<DataTable data={query.current?.data ?? []} {columns} searchColumn="ticker" />
 		{/if}
 	</div>
 </div>

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getJobs } from '$lib/api/api.remote';
-	import DataTable from './table-jobs/data-table.svelte';
-	import { columns } from './table-jobs/jobs.js';
+	import DataTable from '$lib/components/data-table/data-table.svelte';
+	import { columns } from './table.js';
 	import Spinner from '$lib/components/ui/spinner/spinner.svelte';
 
 	let query = getJobs();
@@ -16,7 +16,7 @@
 				<Spinner class="size-6" />
 			</div>
 		{:else}
-			<DataTable data={query.current?.data ?? []} {columns} />
+			<DataTable data={query.current?.data ?? []} {columns} searchColumn="payload" />
 		{/if}
 	</div>
 </div>

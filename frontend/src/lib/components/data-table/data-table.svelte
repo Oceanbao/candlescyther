@@ -23,9 +23,10 @@
 	type DataTableProps<TData, TValue> = {
 		columns: ColumnDef<TData, TValue>[];
 		data: TData[];
+		searchColumn: string;
 	};
 
-	let { data, columns }: DataTableProps<TData, TValue> = $props();
+	let { data, columns, searchColumn }: DataTableProps<TData, TValue> = $props();
 
 	// doc: https://tanstack.com/table/v8/docs/api/features/pagination
 	let pagination = $state<PaginationState>({ pageIndex: 0, pageSize: 10 });
@@ -105,13 +106,13 @@
 <div>
 	<div class="flex items-center py-4">
 		<Input
-			placeholder="Filter payload..."
-			value={(table.getColumn('payload')?.getFilterValue() as string) ?? ''}
+			placeholder={`Filter ${searchColumn}...`}
+			value={(table.getColumn(searchColumn)?.getFilterValue() as string) ?? ''}
 			onchange={(e) => {
-				table.getColumn('payload')?.setFilterValue(e.currentTarget.value);
+				table.getColumn(searchColumn)?.setFilterValue(e.currentTarget.value);
 			}}
 			oninput={(e) => {
-				table.getColumn('payload')?.setFilterValue(e.currentTarget.value);
+				table.getColumn(searchColumn)?.setFilterValue(e.currentTarget.value);
 			}}
 			class="max-w-sm"
 		/>
@@ -190,4 +191,7 @@
 		{table.getFilteredSelectedRowModel().rows.length} of{' '}
 		{table.getFilteredRowModel().rows.length} row(s) selected.
 	</div>
+	<!-- 	<pre> -->
+	<!--         {JSON.stringify({ columnFilters: table.getState().columnFilters }, null, 2)} -->
+	<!--       </pre> -->
 </div>

@@ -1,11 +1,11 @@
 import { renderComponent, renderSnippet } from '$lib/components/ui/data-table';
 import type { ColumnDef } from '@tanstack/table-core';
 import { createRawSnippet } from 'svelte';
-import DataTableActions from './data-table-actions.svelte';
-import DataTableSortButton from './data-table-sort-button.svelte';
+import DataTableActions from './data-table-action.svelte';
+import DataTableSortButton from '$lib/components/data-table/data-table-sort-button.svelte';
 import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 import type { TStocks } from '$lib/server/client';
-import DataFilterSelect from './data-filter-select.svelte';
+import DataFilterSelect from './data-table-filter-select.svelte';
 
 export const columns: ColumnDef<TStocks>[] = [
 	{

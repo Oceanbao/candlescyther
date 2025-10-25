@@ -1,40 +1,23 @@
 import { renderComponent, renderSnippet } from '$lib/components/ui/data-table';
 import type { ColumnDef } from '@tanstack/table-core';
 import { createRawSnippet } from 'svelte';
-import DataTableActions from './data-table-actions.svelte';
-import DataTableSortButton from './data-table-sort-button.svelte';
+import DataTableActions from './data-table-action.svelte';
+import DataTableSortButton from '$lib/components/data-table/data-table-sort-button.svelte';
 import { Checkbox } from '$lib/components/ui/checkbox/index.js';
-import type { TLogs } from '$lib/server/client';
+import type { TSignals } from '$lib/server/client';
+
+const formatter = (num: number) => num.toFixed(4);
 
 // This type is used to define the shape of data.
 // Columns are where you define the core of what your table will look like.
 // They define the data that will be displayed, how it will be formatted, sorted and filtered.
 // Use Zod schema for typing.
-
-const maplevel = (level: number) => {
-	switch (level) {
-		case 0:
-			return 'TRACE';
-		case 1:
-			return 'DEBUG';
-		case 2:
-			return 'INFO';
-		case 3:
-			return 'WARN';
-		case 4:
-			return 'ERROR';
-		case 5:
-			return 'FATAL';
-	}
-	return 'INFO';
-};
-
-export const columns: ColumnDef<TLogs>[] = [
+export const columns: ColumnDef<TSignals>[] = [
 	{
-		accessorKey: 'log_level',
+		accessorKey: 'ticker',
 		header: () => {
 			const headerSnippet = createRawSnippet(() => ({
-				render: () => `<div class="text-center">Level</div>`
+				render: () => `<div class="text-center">Ticker</div>`
 			}));
 			return renderSnippet(headerSnippet);
 		},
@@ -44,77 +27,81 @@ export const columns: ColumnDef<TLogs>[] = [
 			// 	currency: 'USD'
 			// });
 
-			const cellSnippet = createRawSnippet<[{ log_level: string }]>((getData) => {
-				const { log_level } = getData();
+			const cellSnippet = createRawSnippet<[{ ticker: string }]>((getData) => {
+				const { ticker } = getData();
+				// const formatted = formatter.format(amount);
 				return {
-					render: () => `<div class="text-right font-medium">${log_level}</div>`
+					render: () => `<div class="text-center font-medium">${ticker}</div>`
 				};
 			});
 
 			return renderSnippet(cellSnippet, {
-				log_level: maplevel(row.original.log_level)
+				ticker: row.original.ticker
 			});
 		}
 	},
 	{
-		accessorKey: 'log_target',
+		accessorKey: 'boll_dist',
+		header: ({ column }) =>
+			renderComponent(DataTableSortButton, {
+				style: 'text-align: center; width: 100%; height: 100%;',
+				title: 'BOLL dist',
+				onclick: column.getToggleSortingHandler()
+			}),
+		cell: ({ row }) => {
+			const cellSnippet = createRawSnippet<[{ boll_dist: number }]>((getData) => {
+				const { boll_dist } = getData();
+				return {
+					render: () => `<div class="text-center">${boll_dist.toFixed(4)}</div>`
+				};
+			});
+
+			return renderSnippet(cellSnippet, {
+				boll_dist: row.original.boll_dist
+			});
+		}
+	},
+	{
+		accessorKey: 'kdj_k',
 		header: () => {
 			const headerSnippet = createRawSnippet(() => ({
-				render: () => `<div class="text-center">Target</div>`
+				render: () => `<div class="text-center">K</div>`
 			}));
 			return renderSnippet(headerSnippet);
 		},
 		cell: ({ row }) => {
-			const cellSnippet = createRawSnippet<[{ log_target: string }]>((getData) => {
-				const { log_target } = getData();
+			const cellSnippet = createRawSnippet<[{ kdj_k: number }]>((getData) => {
+				const { kdj_k } = getData();
+				const formatted = formatter(kdj_k);
 				return {
-					render: () => `<div class="text-right font-medium">${log_target}</div>`
+					render: () => `<div class="text-center font-medium">${formatted}</div>`
 				};
 			});
 
 			return renderSnippet(cellSnippet, {
-				log_target: row.original.log_target
+				kdj_k: row.original.kdj_k
 			});
 		}
 	},
 	{
-		accessorKey: 'log_message',
-		header: () => {
-			const amountHeaderSnippet = createRawSnippet(() => ({
-				render: () => `<div class="text-center">Message</div>`
-			}));
-			return renderSnippet(amountHeaderSnippet);
-		},
-		cell: ({ row }) => {
-			const payloadCellSnippet = createRawSnippet<[{ log_message: string }]>((getData) => {
-				const { log_message } = getData();
-				return {
-					render: () => `<div class="text-right font-medium">${JSON.stringify(log_message)}</div>`
-				};
-			});
-
-			return renderSnippet(payloadCellSnippet, {
-				log_message: row.original.log_message as string
-			});
-		}
-	},
-	{
-		accessorKey: 'log_timestamp',
+		accessorKey: 'kdj_d',
 		header: ({ column }) =>
 			renderComponent(DataTableSortButton, {
 				style: 'text-align: center; width: 100%; height: 100%;',
+				title: 'D',
 				onclick: column.getToggleSortingHandler()
 			}),
 		cell: ({ row }) => {
-			const createdCellSnippet = createRawSnippet<[{ log_timestamp: string }]>((getData) => {
-				const { log_timestamp } = getData();
+			const cellSnippet = createRawSnippet<[{ kdj_d: number }]>((getData) => {
+				const { kdj_d } = getData();
+				const formatted = formatter(kdj_d);
 				return {
-					render: () => `<div class="text-center">${log_timestamp}</div>`
+					render: () => `<div class="text-center">${formatted}</div>`
 				};
 			});
 
-			return renderSnippet(createdCellSnippet, {
-				log_timestamp: row.original.log_timestamp
+			return renderSnippet(cellSnippet, {
+				kdj_d: row.original.kdj_d
 			});
 		}
 	},
@@ -124,7 +111,7 @@ export const columns: ColumnDef<TLogs>[] = [
 		// Use this to handle actions for your row eg. use the id to make a DELETE call to your API.
 		cell: ({ row }) => {
 			// You can pass whatever you need from `row.original` to the component
-			return renderComponent(DataTableActions, { id: `${row.original.id}` });
+			return renderComponent(DataTableActions, { id: `${row.original.ticker}` });
 		}
 	},
 	{
