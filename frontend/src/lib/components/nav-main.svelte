@@ -62,7 +62,7 @@
 						>
 							{#snippet child({ props })}
 								<Dialog.Trigger {...props} class={buttonVariants({ variant: 'outline' })}>
-									<span>Run Jobs</span>
+									<span>Update</span>
 								</Dialog.Trigger>
 							{/snippet}
 						</Sidebar.MenuButton>
@@ -118,7 +118,7 @@
 							</div>
 						{:else}
 							<Dialog.Footer>
-								<Button type="button" onclick={() => runFetch()}>
+								<Button type="button" onclick={() => {}}>
 									{#if fetching}
 										<Spinner />
 									{:else if fetchDone}
