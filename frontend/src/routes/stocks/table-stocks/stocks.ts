@@ -93,9 +93,10 @@ export const columns: ColumnDef<TStocks>[] = [
 			}),
 		cell: ({ row }) => {
 			const cellSnippet = createRawSnippet<[{ total_cap: number }]>((getData) => {
-				const { total_cap } = getData();
+				let { total_cap } = getData();
+				total_cap = total_cap / 1_000_000_000;
 				return {
-					render: () => `<div class="text-right">${total_cap}</div>`
+					render: () => `<div class="text-right">${total_cap.toFixed(4)}</div>`
 				};
 			});
 
@@ -105,18 +106,41 @@ export const columns: ColumnDef<TStocks>[] = [
 		}
 	},
 	{
+		accessorKey: 'pe',
+		header: ({ column }) =>
+			renderComponent(DataTableSortButton, {
+				name: 'PE',
+				style: 'text-align: center; width: 100%; height: 100%;',
+				onclick: column.getToggleSortingHandler()
+			}),
+		cell: ({ row }) => {
+			const cellSnippet = createRawSnippet<[{ pe: number }]>((getData) => {
+				let { pe } = getData();
+				pe = pe / 100;
+				return {
+					render: () => `<div class="text-right">${pe}</div>`
+				};
+			});
+
+			return renderSnippet(cellSnippet, {
+				pe: row.original.pe ?? 0
+			});
+		}
+	},
+	{
 		accessorKey: 'revenue',
-		header: () => {
-			const headerSnippet = createRawSnippet(() => ({
-				render: () => `<div class="text-center">revenue</div>`
-			}));
-			return renderSnippet(headerSnippet);
-		},
+		header: ({ column }) =>
+			renderComponent(DataTableSortButton, {
+				name: 'revenue',
+				style: 'text-align: center; width: 100%; height: 100%;',
+				onclick: column.getToggleSortingHandler()
+			}),
 		cell: ({ row }) => {
 			const cellSnippet = createRawSnippet<[{ revenue: number }]>((getData) => {
 				let { revenue } = getData();
+				revenue = revenue / 1_000_000_000;
 				return {
-					render: () => `<div class="text-right font-medium">${revenue}</div>`
+					render: () => `<div class="text-right font-medium">${revenue.toFixed(4)}</div>`
 				};
 			});
 
@@ -135,14 +159,36 @@ export const columns: ColumnDef<TStocks>[] = [
 			}),
 		cell: ({ row }) => {
 			const cellSnippet = createRawSnippet<[{ net: number }]>((getData) => {
-				const { net } = getData();
+				let { net } = getData();
+				net = net / 1_000_000_000;
 				return {
-					render: () => `<div class="text-center">${net}</div>`
+					render: () => `<div class="text-right">${net.toFixed(4)}</div>`
 				};
 			});
 
 			return renderSnippet(cellSnippet, {
 				net: row.original.net ?? 0
+			});
+		}
+	},
+	{
+		accessorKey: 'margin',
+		header: ({ column }) =>
+			renderComponent(DataTableSortButton, {
+				name: 'margin',
+				style: 'text-align: center; width: 100%; height: 100%;',
+				onclick: column.getToggleSortingHandler()
+			}),
+		cell: ({ row }) => {
+			const cellSnippet = createRawSnippet<[{ margin: number }]>((getData) => {
+				let { margin } = getData();
+				return {
+					render: () => `<div class="text-right">${margin.toFixed(4)}</div>`
+				};
+			});
+
+			return renderSnippet(cellSnippet, {
+				margin: row.original.margin ?? 0
 			});
 		}
 	},

@@ -7,12 +7,6 @@
 		}
 		return 'A/H';
 	};
-
-	$effect(() => {
-		console.log('filter: ', filterValue);
-		console.log('unique: ', sortedUniqueValue);
-		console.log('onChange: ', onSelectChange);
-	});
 </script>
 
 <select name="uniqueselect" onselect={() => filterValue} onchange={onSelectChange} {...restProps}>

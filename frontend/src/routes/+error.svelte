@@ -1,0 +1,15 @@
+<script lang="ts">
+	import * as Empty from '$lib/components/ui/empty/index.js';
+</script>
+
+<Empty.Root>
+	<Empty.Header>
+		<Empty.Title>404 - Not Found</Empty.Title>
+		<Empty.Description>The page you're looking for doesn't exist.</Empty.Description>
+	</Empty.Header>
+	<Empty.Content>
+		<Empty.Description>
+			Go to <a href="/">landing page</a>
+		</Empty.Description>
+	</Empty.Content>
+</Empty.Root>

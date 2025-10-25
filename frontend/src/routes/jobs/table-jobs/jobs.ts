@@ -86,14 +86,8 @@ export const columns: ColumnDef<TJobs>[] = [
 			return renderSnippet(amountHeaderSnippet);
 		},
 		cell: ({ row }) => {
-			// const formatter = new Intl.NumberFormat('en-US', {
-			// 	style: 'currency',
-			// 	currency: 'USD'
-			// });
-
 			const payloadCellSnippet = createRawSnippet<[{ payload: string }]>((getPayload) => {
 				const { payload } = getPayload();
-				// const formatted = formatter.format(amount);
 				return {
 					render: () => `<div class="text-right font-medium">${JSON.stringify(payload)}</div>`
 				};
@@ -102,6 +96,10 @@ export const columns: ColumnDef<TJobs>[] = [
 			return renderSnippet(payloadCellSnippet, {
 				payload: row.original.payload as string
 			});
+		},
+		filterFn: (row, columnId, filterValue) => {
+			let value = JSON.stringify(row.getValue(columnId) as Object);
+			return value.includes(filterValue);
 		}
 	},
 	{
