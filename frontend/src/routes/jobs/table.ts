@@ -112,6 +112,27 @@ export const columns: ColumnDef<TJobs>[] = [
 		}
 	},
 	{
+		accessorKey: 'error_message',
+		header: () => {
+			const amountHeaderSnippet = createRawSnippet(() => ({
+				render: () => `<div class="text-center">Message</div>`
+			}));
+			return renderSnippet(amountHeaderSnippet);
+		},
+		cell: ({ row }) => {
+			const payloadCellSnippet = createRawSnippet<[{ message: string }]>((getData) => {
+				const { message } = getData();
+				return {
+					render: () => `<div class="text-right font-medium">${message}</div>`
+				};
+			});
+
+			return renderSnippet(payloadCellSnippet, {
+				message: row.original.error_message ?? ''
+			});
+		}
+	},
+	{
 		id: 'actions',
 		// You can access the row data using row.original in the cell function.
 		// Use this to handle actions for your row eg. use the id to make a DELETE call to your API.
