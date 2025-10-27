@@ -44,10 +44,9 @@ export const columns: ColumnDef<TStocks>[] = [
 			}),
 		cell: ({ row }) => {
 			const formatter = (market: number) => {
-				if (market > 100 && market < 110) {
-					return 'US';
-				}
-				return 'A/H';
+				if (market > 100 && market < 110) return 'US';
+				if (market === 116) return 'H';
+				return 'A';
 			};
 			const cellSnippet = createRawSnippet<[{ market: number }]>((getData) => {
 				const { market } = getData();

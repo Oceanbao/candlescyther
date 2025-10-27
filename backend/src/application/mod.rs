@@ -40,7 +40,7 @@ pub fn init_runner(db: &Database) -> JobRunner {
     ]);
 
     let concurrency = 3;
-    let wait_ms = 1000;
+    let wait_ms = 3000;
     let batch_size = concurrency;
 
     JobRunner::new(

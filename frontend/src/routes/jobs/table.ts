@@ -3,7 +3,7 @@ import type { ColumnDef } from '@tanstack/table-core';
 import { createRawSnippet } from 'svelte';
 import DataTableActions from './data-table-action.svelte';
 import DataTableSortButton from '$lib/components/data-table/data-table-sort-button.svelte';
-import DataTableFilterSelect from '$lib/components/data-table/data-table-filter.svelte';
+import DataTableFilterSelect from './data-table-filter.svelte';
 import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 import type { TJobs } from '$lib/server/client';
 
