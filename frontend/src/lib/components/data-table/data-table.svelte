@@ -19,6 +19,12 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
+	import ChevronLeft from '@tabler/icons-svelte/icons/chevron-left';
+	import ChevronsLeft from '@tabler/icons-svelte/icons/chevrons-left';
+	import ChevronRight from '@tabler/icons-svelte/icons/chevron-right';
+	import ChevronsRight from '@tabler/icons-svelte/icons/chevrons-right';
+	import Label from '../ui/label/label.svelte';
+	import * as Select from '$lib/components/ui/select/index.js';
 
 	type DataTableProps<TData, TValue> = {
 		columns: ColumnDef<TData, TValue>[];
@@ -169,28 +175,100 @@
 			</Table.Body>
 		</Table.Root>
 	</div>
-	<div class="flex items-center justify-end space-x-2 py-4">
-		<Button
-			variant="outline"
-			size="sm"
-			onclick={() => table.previousPage()}
-			disabled={!table.getCanPreviousPage()}
-		>
-			Previous
-		</Button>
-		<Button
-			variant="outline"
-			size="sm"
-			onclick={() => table.nextPage()}
-			disabled={!table.getCanNextPage()}
-		>
-			Next
-		</Button>
+
+	<div class="flex items-center justify-between px-4 py-4">
+		<div class="hidden flex-1 text-sm text-muted-foreground lg:flex">
+			{table.getFilteredSelectedRowModel().rows.length} of
+			{table.getFilteredRowModel().rows.length} row(s) selected.
+		</div>
+		<div class="flex w-full items-center gap-8 lg:w-fit">
+			<div class="hidden items-center gap-2 lg:flex">
+				<Label for="rows-per-page" class="text-sm font-medium">Rows per page</Label>
+				<Select.Root
+					type="single"
+					bind:value={
+						() => `${table.getState().pagination.pageSize}`, (v) => table.setPageSize(Number(v))
+					}
+				>
+					<Select.Trigger size="sm" class="w-20" id="rows-per-page">
+						{table.getState().pagination.pageSize}
+					</Select.Trigger>
+					<Select.Content side="top">
+						{#each [10, 20, 30, 40, 50] as pageSize (pageSize)}
+							<Select.Item value={pageSize.toString()}>
+								{pageSize}
+							</Select.Item>
+						{/each}
+					</Select.Content>
+				</Select.Root>
+			</div>
+			<div class="flex w-fit items-center justify-center text-sm font-medium">
+				Page {table.getState().pagination.pageIndex + 1} of
+				{table.getPageCount()}
+			</div>
+			<div class="ml-auto flex items-center gap-2 lg:ml-0">
+				<Button
+					variant="outline"
+					class="hidden h-8 w-8 p-0 lg:flex"
+					onclick={() => table.setPageIndex(0)}
+					disabled={!table.getCanPreviousPage()}
+				>
+					<span class="sr-only">Go to first page</span>
+					<ChevronsLeft />
+				</Button>
+				<Button
+					variant="outline"
+					class="size-8"
+					size="icon"
+					onclick={() => table.previousPage()}
+					disabled={!table.getCanPreviousPage()}
+				>
+					<span class="sr-only">Go to previous page</span>
+					<ChevronLeft />
+				</Button>
+				<Button
+					variant="outline"
+					class="size-8"
+					size="icon"
+					onclick={() => table.nextPage()}
+					disabled={!table.getCanNextPage()}
+				>
+					<span class="sr-only">Go to next page</span>
+					<ChevronRight />
+				</Button>
+				<Button
+					variant="outline"
+					class="hidden size-8 lg:flex"
+					size="icon"
+					onclick={() => table.setPageIndex(table.getPageCount() - 1)}
+					disabled={!table.getCanNextPage()}
+				>
+					<span class="sr-only">Go to last page</span>
+					<ChevronsRight />
+				</Button>
+			</div>
+		</div>
 	</div>
-	<div class="flex-1 text-sm text-muted-foreground">
-		{table.getFilteredSelectedRowModel().rows.length} of{' '}
-		{table.getFilteredRowModel().rows.length} row(s) selected.
-	</div>
+
+	<!-- <div class="flex items-center justify-end space-x-2 py-4"> -->
+	<!-- 	<Button -->
+	<!-- 		variant="outline" -->
+	<!-- 		size="sm" -->
+	<!-- 		onclick={() => table.previousPage()} -->
+	<!-- 		disabled={!table.getCanPreviousPage()} -->
+	<!-- 	> -->
+	<!-- 		Previous -->
+	<!-- 	</Button> -->
+	<!-- 	<Button -->
+	<!-- 		variant="outline" -->
+	<!-- 		size="sm" -->
+	<!-- 		onclick={() => table.nextPage()} -->
+	<!-- 		disabled={!table.getCanNextPage()} -->
+	<!-- 	> -->
+	<!-- 		Next -->
+	<!-- 	</Button> -->
+	<!-- </div> -->
+
 	<!-- 	<pre> -->
 	<!--         {JSON.stringify({ columnFilters: table.getState().columnFilters }, null, 2)} -->
 	<!--       </pre> -->

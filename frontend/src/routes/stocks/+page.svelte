@@ -16,7 +16,7 @@
 				<Spinner class="size-6" />
 			</div>
 		{:else}
-			<DataTable data={query.current?.data ?? []} {columns} searchColumn="realname" />
+			<DataTable data={query.current?.data ?? []} {columns} searchColumn="ticker" />
 		{/if}
 	</div>
 </div>
