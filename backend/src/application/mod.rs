@@ -39,7 +39,7 @@ pub fn init_runner(db: &Database) -> JobRunner {
         Arc::new(create_stock_handler),
     ]);
 
-    let concurrency = 3;
+    let concurrency = 2;
     let wait_ms = 3000;
     let batch_size = concurrency;
 

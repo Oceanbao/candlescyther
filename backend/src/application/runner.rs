@@ -217,7 +217,7 @@ mod tests {
         ]);
 
         let concurrency = 2;
-        let wait_ms = 1000;
+        let wait_ms = 3000;
         let batch_size = concurrency;
 
         Ok(JobRunner::new(
