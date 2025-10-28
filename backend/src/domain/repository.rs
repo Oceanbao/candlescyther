@@ -1,6 +1,9 @@
 use async_trait::async_trait;
 
-use crate::domain::model::{Kline, Signal, Stock};
+use crate::{
+    domain::model::{Kline, Signal, Stock},
+    infra::data::moneyflow::MoneyflowEastmoney,
+};
 
 /// Repository for the main domain of candlescyther, it includes stock analysis related persistence.
 /// READ/WRITE stocks, klines, signals, etc.
@@ -18,4 +21,7 @@ pub trait DomainRepository: Send + Sync {
     async fn get_signals(&self, ticker: &str) -> Result<Signal, anyhow::Error>;
     async fn get_signals_all(&self) -> Result<Vec<Signal>, anyhow::Error>;
     async fn get_signals_all_us(&self) -> Result<Vec<Signal>, anyhow::Error>;
+
+    async fn create_ml_sector(&self, flows: &[MoneyflowEastmoney]) -> Result<(), anyhow::Error>;
+    async fn get_ml_sector(&self) -> Result<Vec<MoneyflowEastmoney>, anyhow::Error>;
 }

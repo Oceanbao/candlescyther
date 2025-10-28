@@ -6,7 +6,7 @@ use crate::infra::data::service::{parse_raw_eastmoney, url2text};
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
 pub struct MoneyflowEastmoney {
-    pub datetime: String,
+    pub date_time: String,
     pub ticker: String,
     pub realname: String,
     pub lead_value: f64,
@@ -75,13 +75,13 @@ pub struct RawMoneyflowEastmoneyItem {
     pub small_share: f64,
 }
 
-fn create_moneyflow(raw: RawMoneyflowEastmoney) -> Vec<MoneyflowEastmoney> {
+pub fn create_moneyflow(raw: RawMoneyflowEastmoney) -> Vec<MoneyflowEastmoney> {
     let now = chrono::Utc::now().to_string();
     raw.data
         .diff
         .iter()
         .map(|d| MoneyflowEastmoney {
-            datetime: now.clone(),
+            date_time: now.clone(),
             ticker: format!("{}.{}", d.market, d.ticker),
             realname: d.name.clone(),
             lead_value: d.lead_value,
