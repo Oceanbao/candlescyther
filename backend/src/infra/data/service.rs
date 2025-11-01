@@ -1,8 +1,29 @@
 use serde::Deserialize;
+use std::time::{SystemTime, UNIX_EPOCH};
+
+use ureq::Agent;
+
+const USER_AGENTS: &[&str] = &[
+    "Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; SLCC2; .NET CLR 2.0.50727; .NET CLR 3.5.30729; .NET CLR 3.0.30729; .NET4.0C; .NET4.0E; rv:11.0) like Gecko",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36 Edg/134.0.0.0",
+    "Mozilla/5.0 (X11; CrOS x86_64 14541.0.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3.1 Safari/605.1.15",
+    "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.10 Safari/605.1.1",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.3",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.3",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.3",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36 Trailer/93.3.8652.5",
+];
 
 // url2text GET url and returns text results.
 pub async fn url2text(url: &str) -> Result<String, anyhow::Error> {
-    match ureq::get(url).call() {
+    // let proxy = Proxy::new("http://121.43.150.231:3128")?;
+    // let agent: Agent = Agent::config_builder().proxy(Some(proxy)).build().into();
+    let agent: Agent = Agent::config_builder().build().into();
+    let user_agent = choose_random(USER_AGENTS).unwrap();
+
+    match agent.get(url).header("User-Agent", *user_agent).call() {
         Ok(mut resp) => {
             let text = resp.body_mut().read_to_string()?;
             Ok(text)
@@ -14,6 +35,22 @@ pub async fn url2text(url: &str) -> Result<String, anyhow::Error> {
             anyhow::bail!("Non-HTTP error: {e}",)
         }
     }
+}
+
+fn choose_random<T>(slice: &[T]) -> Option<&T> {
+    if slice.is_empty() {
+        return None;
+    }
+
+    // Get current time in nanoseconds
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default();
+
+    let nanos = now.as_nanos() as usize;
+    let index = nanos % slice.len();
+
+    Some(&slice[index])
 }
 
 // Parse eastmoney jquery string results into T.

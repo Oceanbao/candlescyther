@@ -1,7 +1,7 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 use tracing::debug;
 
-use tokio::sync::Semaphore;
+use tokio::{sync::Semaphore, time::sleep};
 
 use crate::{
     application::{
@@ -20,7 +20,7 @@ pub struct JobRunner {
     pub repo_job: Arc<dyn JobRepository>,
     handler_registry: Arc<JobHandlerRegistry>,
     concurrency_limit: Arc<Semaphore>,
-    wait_ms: usize,
+    wait_sec: u64,
     batch_size: usize,
 }
 
@@ -40,7 +40,7 @@ impl JobRunner {
         repo_job: Arc<dyn JobRepository>,
         handler_registry: Arc<JobHandlerRegistry>,
         max_concurrent_jobs: usize,
-        wait_ms: usize,
+        wait_sec: u64,
         batch_size: usize,
     ) -> Self {
         Self {
@@ -48,7 +48,7 @@ impl JobRunner {
             repo_job,
             handler_registry,
             concurrency_limit: Arc::new(Semaphore::new(max_concurrent_jobs)),
-            wait_ms,
+            wait_sec,
             batch_size,
         }
     }
@@ -56,16 +56,12 @@ impl JobRunner {
     // NOTE: This is handled by the initiator in a server handler.
     // If err, it's non-task error and should be logged.
     pub async fn run(&self) -> Result<(), RunnerError> {
-        let mut timer = tokio::time::interval(tokio::time::Duration::from_millis(
-            self.wait_ms.try_into().unwrap(),
-        ));
-
         loop {
+            sleep(Duration::from_secs(self.wait_sec)).await;
+
             debug!("------- run loop -------");
 
-            timer.tick().await;
-
-            // FIXME: refine the num jobs each loop gets
+            // FIX: refine the num jobs each loop gets
             // NOTE: this != `concurrency_limit`
             let pending_jobs = self.repo_job.get_pending_jobs(self.batch_size).await?;
 
@@ -217,7 +213,7 @@ mod tests {
         ]);
 
         let concurrency = 2;
-        let wait_ms = 3000;
+        let wait_sec = 3;
         let batch_size = concurrency;
 
         Ok(JobRunner::new(
@@ -225,7 +221,7 @@ mod tests {
             repo_job,
             Arc::new(handler_registry),
             concurrency,
-            wait_ms,
+            wait_sec,
             batch_size,
         ))
     }

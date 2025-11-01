@@ -64,6 +64,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/mf/sector": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List moneyflow sector data.
+         * @description Returns a 200 if the job is submitted.
+         */
+        get: operations["list_mf_sector"];
+        put?: never;
+        /**
+         * Create moneyflow sector data.
+         * @description Returns a 200 if the job is submitted.
+         */
+        post: operations["create_mf_sector"];
+        /**
+         * Delete moneyflow sector data.
+         * @description Returns a 200 if the job is submitted.
+         */
+        delete: operations["delete_mf_sector"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/signals": {
         parameters: {
             query?: never;
@@ -180,7 +208,7 @@ export interface components {
         /** @enum {string} */
         JobStatus: "Pending" | "Running" | "Done" | "Error";
         /** @enum {string} */
-        JobType: "CreateStock" | "DeleteStock" | "CrawlPrice" | "ComputeSignal";
+        JobType: "CreateStock" | "DeleteStock" | "CrawlPrice" | "ComputeSignal" | "CreateMfSector";
         Kline: {
             /** Format: double */
             k_close: number;
@@ -208,6 +236,31 @@ export interface components {
             log_message: string;
             log_target: string;
             log_timestamp: string;
+        };
+        MoneyflowEastmoney: {
+            date_time: string;
+            /** Format: double */
+            large_share: number;
+            /** Format: double */
+            large_value: number;
+            /** Format: double */
+            lead_share: number;
+            /** Format: double */
+            lead_value: number;
+            /** Format: double */
+            mid_share: number;
+            /** Format: double */
+            mid_value: number;
+            realname: string;
+            /** Format: double */
+            small_share: number;
+            /** Format: double */
+            small_value: number;
+            /** Format: double */
+            super_share: number;
+            /** Format: double */
+            super_value: number;
+            ticker: string;
         };
         Signal: {
             /** Format: double */
@@ -335,6 +388,89 @@ export interface operations {
                 };
             };
             /** @description Database error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    list_mf_sector: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List moneyflow sector records */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MoneyflowEastmoney"][];
+                };
+            };
+            /** @description Job runner error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    create_mf_sector: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Job submitted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Job runner error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    delete_mf_sector: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Delete moneyflow sector records successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Job runner error */
             500: {
                 headers: {
                     [name: string]: unknown;

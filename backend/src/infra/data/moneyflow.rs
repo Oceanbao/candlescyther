@@ -76,12 +76,17 @@ pub struct RawMoneyflowEastmoneyItem {
 }
 
 pub fn create_moneyflow(raw: RawMoneyflowEastmoney) -> Vec<MoneyflowEastmoney> {
-    let now = chrono::Utc::now().to_string();
+    let now = chrono::Utc::now()
+        .to_string()
+        .split_whitespace()
+        .next()
+        .unwrap()
+        .to_string();
     raw.data
         .diff
         .iter()
         .map(|d| MoneyflowEastmoney {
-            date_time: now.clone(),
+            date_time: now.to_string(),
             ticker: format!("{}.{}", d.market, d.ticker),
             realname: d.name.clone(),
             lead_value: d.lead_value,
@@ -95,6 +100,7 @@ pub fn create_moneyflow(raw: RawMoneyflowEastmoney) -> Vec<MoneyflowEastmoney> {
             small_value: d.small_value,
             small_share: d.small_share,
         })
+        .filter(|mf| BK.iter().any(|x| **x == mf.ticker))
         .collect()
 }
 
@@ -104,7 +110,7 @@ pub struct UrlMoneyflowSectorEastmoney(String);
 impl UrlMoneyflowSectorEastmoney {
     pub fn new() -> Self {
         let url = String::from(
-            "https://push2.eastmoney.com/api/qt/clist/get?cb=jQuery112301083078708820121_1761565635682&fid=f62&po=1&pz=50&pn=1&np=1&fltt=2&invt=2&ut=8dec03ba335b81bf4ebdf7b29ec27d15&fs=m%3A90+t%3A2&fields=f12%2Cf14%2Cf2%2Cf3%2Cf62%2Cf184%2Cf66%2Cf69%2Cf72%2Cf75%2Cf78%2Cf81%2Cf84%2Cf87%2Cf204%2Cf205%2Cf124%2Cf1%2Cf13",
+            "https://push2.eastmoney.com/api/qt/clist/get?cb=jQuery112301083078708820121_1761565635682&fid=f62&po=1&pz=90&pn=1&np=1&fltt=2&invt=2&ut=8dec03ba335b81bf4ebdf7b29ec27d15&fs=m%3A90+t%3A2&fields=f12%2Cf14%2Cf2%2Cf3%2Cf62%2Cf184%2Cf66%2Cf69%2Cf72%2Cf75%2Cf78%2Cf81%2Cf84%2Cf87%2Cf204%2Cf205%2Cf124%2Cf1%2Cf13",
         );
         UrlMoneyflowSectorEastmoney(url)
     }
@@ -127,6 +133,64 @@ pub async fn crawl_moneyflow_sector_eastmoney(
         Err(e) => anyhow::bail!(e.to_string()),
     }
 }
+
+const BK: [&str; 55] = [
+    "90.BK0475",
+    "90.BK1036",
+    "90.BK0464",
+    "90.BK0473",
+    "90.BK1037",
+    "90.BK0428",
+    "90.BK0736",
+    "90.BK0474",
+    "90.BK0459",
+    "90.BK1033",
+    "90.BK0448",
+    "90.BK0737",
+    "90.BK0481",
+    "90.BK0478",
+    "90.BK1029",
+    "90.BK0465",
+    "90.BK0910",
+    "90.BK0437",
+    "90.BK0447",
+    "90.BK1031",
+    "90.BK0438",
+    "90.BK1044",
+    "90.BK0545",
+    "90.BK0538",
+    "90.BK0457",
+    "90.BK0425",
+    "90.BK1041",
+    "90.BK0480",
+    "90.BK1027",
+    "90.BK1038",
+    "90.BK0735",
+    "90.BK0486",
+    "90.BK0433",
+    "90.BK0450",
+    "90.BK0479",
+    "90.BK1019",
+    "90.BK0422",
+    "90.BK0727",
+    "90.BK0739",
+    "90.BK0429",
+    "90.BK1034",
+    "90.BK0454",
+    "90.BK1046",
+    "90.BK1015",
+    "90.BK0471",
+    "90.BK0732",
+    "90.BK0731",
+    "90.BK1020",
+    "90.BK0729",
+    "90.BK0546",
+    "90.BK0458",
+    "90.BK0424",
+    "90.BK1039",
+    "90.BK1017",
+    "90.BK1030",
+];
 
 #[cfg(test)]
 mod test {

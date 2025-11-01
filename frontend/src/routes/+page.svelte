@@ -3,31 +3,45 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import FolderCodeIcon from '@tabler/icons-svelte/icons/folder-code';
 	import ArrowUpRightIcon from '@lucide/svelte/icons/arrow-up-right';
+	import Spinner from '$lib/components/ui/spinner/spinner.svelte';
+	import LineChart from './line-chart.svelte';
+	import { getMfSector } from '$lib/api/api.remote';
+
+	let query = getMfSector();
 </script>
 
 <div class="flex flex-1 flex-col">
 	<div class="@container/main m-1 flex flex-1 flex-col gap-2">
-		<Empty.Root>
-			<Empty.Header>
-				<Empty.Media variant="icon">
-					<FolderCodeIcon />
-				</Empty.Media>
-				<Empty.Title>No Projects Yet</Empty.Title>
-				<Empty.Description>
-					You haven't created any projects yet. Get started by creating your first project.
-				</Empty.Description>
-			</Empty.Header>
-			<Empty.Content>
-				<div class="flex gap-2">
-					<Button>Create Project</Button>
-					<Button variant="outline">Import Project</Button>
-				</div>
-			</Empty.Content>
-			<Button variant="link" class="text-muted-foreground" size="sm">
-				<a href="#/">
-					Learn More <ArrowUpRightIcon class="inline" />
-				</a>
-			</Button>
-		</Empty.Root>
+		{#if query.error}
+			<em>ERROR</em>
+		{:else if query.loading}
+			<div class="grid h-1/2 place-content-center">
+				<Spinner class="size-6" />
+			</div>
+		{:else}
+			<LineChart data={query.current?.data ?? []} />
+		{/if}
+		<!-- <Empty.Root> -->
+		<!-- 	<Empty.Header> -->
+		<!-- 		<Empty.Media variant="icon"> -->
+		<!-- 			<FolderCodeIcon /> -->
+		<!-- 		</Empty.Media> -->
+		<!-- 		<Empty.Title>No Projects Yet</Empty.Title> -->
+		<!-- 		<Empty.Description> -->
+		<!-- 			You haven't created any projects yet. Get started by creating your first project. -->
+		<!-- 		</Empty.Description> -->
+		<!-- 	</Empty.Header> -->
+		<!-- 	<Empty.Content> -->
+		<!-- 		<div class="flex gap-2"> -->
+		<!-- 			<Button>Create Project</Button> -->
+		<!-- 			<Button variant="outline">Import Project</Button> -->
+		<!-- 		</div> -->
+		<!-- 	</Empty.Content> -->
+		<!-- 	<Button variant="link" class="text-muted-foreground" size="sm"> -->
+		<!-- 		<a href="#/"> -->
+		<!-- 			Learn More <ArrowUpRightIcon class="inline" /> -->
+		<!-- 		</a> -->
+		<!-- 	</Button> -->
+		<!-- </Empty.Root> -->
 	</div>
 </div>

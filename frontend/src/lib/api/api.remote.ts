@@ -83,3 +83,11 @@ export const createStocks = command(z.string(), async (tickers) => {
 		}
 	});
 });
+
+export const getMfSector = query(async () => {
+	let { data, error } = await server.GET('/api/mf/sector');
+
+	return {
+		data: data ?? []
+	};
+});

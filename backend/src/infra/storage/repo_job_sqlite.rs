@@ -131,4 +131,18 @@ impl JobRepository for SqliteJobRepository {
 
         Ok(jobs)
     }
+
+    async fn delete_jobs(&self, days: u32) -> Result<(), RunnerError> {
+        let days_param = format!("-{} days", days);
+
+        let result: Vec<Job> =
+            sqlx::query_as("SELECT * FROM jobs WHERE created_at < date('now', ?)")
+                .bind(days_param)
+                .fetch_all(&self.pool)
+                .await?;
+
+        println!("{:#?}", result);
+
+        Ok(())
+    }
 }

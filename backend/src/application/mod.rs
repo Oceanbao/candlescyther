@@ -4,6 +4,7 @@ use crate::{
     application::{
         handlers::{
             JobHandlerRegistry, handler_create_klines::CrawlPriceHandler,
+            handler_create_ml_sector::CreateMfSectorHandler,
             handler_create_signals::ComputeSignalHandler, handler_create_stock::CreateStockHandler,
         },
         runner::JobRunner,
@@ -32,15 +33,20 @@ pub fn init_runner(db: &Database) -> JobRunner {
         repo: repo_domain.clone(),
     };
 
+    let create_mf_sector_handler = CreateMfSectorHandler {
+        repo: repo_domain.clone(),
+    };
+
     let mut handler_registry = JobHandlerRegistry::new();
     handler_registry.register_handlers(vec![
         Arc::new(crawl_price_handler),
         Arc::new(compute_signal_handler),
         Arc::new(create_stock_handler),
+        Arc::new(create_mf_sector_handler),
     ]);
 
-    let concurrency = 2;
-    let wait_ms = 3000;
+    let concurrency = 1;
+    let wait_sec = 20;
     let batch_size = concurrency;
 
     JobRunner::new(
@@ -48,7 +54,7 @@ pub fn init_runner(db: &Database) -> JobRunner {
         repo_job,
         Arc::new(handler_registry),
         concurrency,
-        wait_ms,
+        wait_sec,
         batch_size,
     )
 }

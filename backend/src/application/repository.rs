@@ -22,4 +22,5 @@ pub trait JobRepository: Send + Sync {
         output: Option<serde_json::Value>,
     ) -> Result<(), RunnerError>;
     async fn get_jobs_all(&self) -> Result<Vec<Job>, RunnerError>;
+    async fn delete_jobs(&self, days: u32) -> Result<(), RunnerError>;
 }

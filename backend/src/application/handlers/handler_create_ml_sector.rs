@@ -19,17 +19,17 @@ use crate::{
 // ---------------------------------------------------------------
 
 #[derive(Clone)]
-pub struct CreateMlSectorHandler {
+pub struct CreateMfSectorHandler {
     pub repo: Arc<dyn DomainRepository>,
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct CreateMlSectorPayload {}
+pub struct CreateMfSectorPayload {}
 
 #[async_trait]
-impl JobHandler for CreateMlSectorHandler {
+impl JobHandler for CreateMfSectorHandler {
     fn job_type(&self) -> JobType {
-        JobType::CreateMlSector
+        JobType::CreateMfSector
     }
 
     // FIX: later abstract data sourcing into port.
@@ -46,7 +46,7 @@ impl JobHandler for CreateMlSectorHandler {
             }
         };
 
-        self.repo.create_ml_sector(&ml_records).await?;
+        self.repo.create_mf_sector(&ml_records).await?;
 
         Ok(JobResult {
             success: true,

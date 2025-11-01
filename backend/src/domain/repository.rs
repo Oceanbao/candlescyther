@@ -22,6 +22,7 @@ pub trait DomainRepository: Send + Sync {
     async fn get_signals_all(&self) -> Result<Vec<Signal>, anyhow::Error>;
     async fn get_signals_all_us(&self) -> Result<Vec<Signal>, anyhow::Error>;
 
-    async fn create_ml_sector(&self, flows: &[MoneyflowEastmoney]) -> Result<(), anyhow::Error>;
-    async fn get_ml_sector(&self) -> Result<Vec<MoneyflowEastmoney>, anyhow::Error>;
+    async fn create_mf_sector(&self, flows: &[MoneyflowEastmoney]) -> Result<(), anyhow::Error>;
+    async fn get_mf_sector(&self) -> Result<Vec<MoneyflowEastmoney>, anyhow::Error>;
+    async fn delete_mf_sector(&self) -> Result<(), anyhow::Error>;
 }

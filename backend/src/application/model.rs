@@ -49,7 +49,7 @@ pub enum JobType {
     DeleteStock,
     CrawlPrice,
     ComputeSignal,
-    CreateMlSector,
+    CreateMfSector,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

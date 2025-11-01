@@ -14,11 +14,15 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::{
     application::{
-        handlers::handler_create_stock::CreateStockPayload,
+        handlers::{
+            handler_create_ml_sector::CreateMfSectorPayload,
+            handler_create_stock::CreateStockPayload,
+        },
         model::{Job, JobType},
     },
     domain::model::{Kline, Signal, Stock, User},
     infra::{
+        data::moneyflow::MoneyflowEastmoney,
         http::AppState,
         logging::{LogEntry, LogLevel, logit},
     },
@@ -54,6 +58,8 @@ pub fn create_routes_api(app_state: AppState) -> OpenApiRouter {
         .routes(routes!(list_klines))
         // /trigger/all
         .routes(routes!(update_all))
+        // /mf/sector
+        .routes(routes!(create_mf_sector, list_mf_sector, delete_mf_sector))
         .with_state(app_state)
 }
 
@@ -564,4 +570,125 @@ pub async fn update_all(
 #[derive(Deserialize, IntoParams)]
 pub struct TriggerQuery {
     pub code: String,
+}
+
+/// Create moneyflow sector data.
+///
+/// Returns a 200 if the job is submitted.
+#[utoipa::path(
+    post,
+    path = "/mf/sector",
+    tag = "candlescyther",
+    responses(
+        (status = 200, description = "Job submitted"),
+        (status = 500, description = "Job runner error", body = ApiError),
+    )
+)]
+pub async fn create_mf_sector(State(state): State<AppState>) -> impl IntoResponse {
+    let job = Job::new(JobType::CreateMfSector, json!(CreateMfSectorPayload {}));
+
+    if let Err(e) = state.runner.repo_job.create_jobs(vec![job]).await {
+        logit(
+            &state,
+            LogEntry::new(
+                LogLevel::Error,
+                "failed to create_jobs in create_mf_sector",
+                "http/handlers.rs",
+                596,
+            ),
+        )
+        .await;
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiError::RunnerError(e.to_string())),
+        )
+            .into_response();
+    }
+
+    tokio::spawn(async move {
+        if let Err(e) = state.runner.run().await {
+            logit(
+                &state,
+                LogEntry::new(
+                    LogLevel::Error,
+                    format!("runner error: {}", e),
+                    "http/handlers.rs",
+                    615,
+                ),
+            )
+            .await;
+        }
+    });
+
+    (StatusCode::OK).into_response()
+}
+
+/// List moneyflow sector data.
+///
+/// Returns a 200 if the job is submitted.
+#[utoipa::path(
+    get,
+    path = "/mf/sector",
+    tag = "candlescyther",
+    responses(
+        (status = 200, description = "List moneyflow sector records", body = [MoneyflowEastmoney]),
+        (status = 500, description = "Job runner error", body = ApiError),
+    )
+)]
+pub async fn list_mf_sector(State(state): State<AppState>) -> impl IntoResponse {
+    match state.runner.repo_domain.get_mf_sector().await {
+        Ok(mf) => (StatusCode::OK, Json(mf)).into_response(),
+        Err(e) => {
+            logit(
+                &state,
+                LogEntry::new(
+                    LogLevel::Error,
+                    format!("failed to query database {}", e),
+                    "http/handlers.rs",
+                    211,
+                ),
+            )
+            .await;
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiError::DatabaseError(e.to_string())),
+            )
+                .into_response()
+        }
+    }
+}
+
+/// Delete moneyflow sector data.
+///
+/// Returns a 200 if the job is submitted.
+#[utoipa::path(
+    delete,
+    path = "/mf/sector",
+    tag = "candlescyther",
+    responses(
+        (status = 200, description = "Delete moneyflow sector records successfully"),
+        (status = 500, description = "Job runner error", body = ApiError),
+    )
+)]
+pub async fn delete_mf_sector(State(state): State<AppState>) -> impl IntoResponse {
+    match state.runner.repo_domain.delete_mf_sector().await {
+        Ok(_) => (StatusCode::OK).into_response(),
+        Err(e) => {
+            logit(
+                &state,
+                LogEntry::new(
+                    LogLevel::Error,
+                    format!("failed to query database {}", e),
+                    "http/handlers.rs",
+                    683,
+                ),
+            )
+            .await;
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiError::DatabaseError(e.to_string())),
+            )
+                .into_response()
+        }
+    }
 }

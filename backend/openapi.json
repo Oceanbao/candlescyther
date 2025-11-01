@@ -134,6 +134,87 @@
         }
       }
     },
+    "/api/mf/sector": {
+      "get": {
+        "tags": [
+          "candlescyther"
+        ],
+        "summary": "List moneyflow sector data.",
+        "description": "Returns a 200 if the job is submitted.",
+        "operationId": "list_mf_sector",
+        "responses": {
+          "200": {
+            "description": "List moneyflow sector records",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MoneyflowEastmoney"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Job runner error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "candlescyther"
+        ],
+        "summary": "Create moneyflow sector data.",
+        "description": "Returns a 200 if the job is submitted.",
+        "operationId": "create_mf_sector",
+        "responses": {
+          "200": {
+            "description": "Job submitted"
+          },
+          "500": {
+            "description": "Job runner error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "candlescyther"
+        ],
+        "summary": "Delete moneyflow sector data.",
+        "description": "Returns a 200 if the job is submitted.",
+        "operationId": "delete_mf_sector",
+        "responses": {
+          "200": {
+            "description": "Delete moneyflow sector records successfully"
+          },
+          "500": {
+            "description": "Job runner error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/signals": {
       "get": {
         "tags": [
@@ -498,7 +579,8 @@
           "CreateStock",
           "DeleteStock",
           "CrawlPrice",
-          "ComputeSignal"
+          "ComputeSignal",
+          "CreateMfSector"
         ]
       },
       "Kline": {
@@ -577,6 +659,75 @@
             "type": "string"
           },
           "log_timestamp": {
+            "type": "string"
+          }
+        }
+      },
+      "MoneyflowEastmoney": {
+        "type": "object",
+        "required": [
+          "date_time",
+          "ticker",
+          "realname",
+          "lead_value",
+          "lead_share",
+          "super_value",
+          "super_share",
+          "large_value",
+          "large_share",
+          "mid_value",
+          "mid_share",
+          "small_value",
+          "small_share"
+        ],
+        "properties": {
+          "date_time": {
+            "type": "string"
+          },
+          "large_share": {
+            "type": "number",
+            "format": "double"
+          },
+          "large_value": {
+            "type": "number",
+            "format": "double"
+          },
+          "lead_share": {
+            "type": "number",
+            "format": "double"
+          },
+          "lead_value": {
+            "type": "number",
+            "format": "double"
+          },
+          "mid_share": {
+            "type": "number",
+            "format": "double"
+          },
+          "mid_value": {
+            "type": "number",
+            "format": "double"
+          },
+          "realname": {
+            "type": "string"
+          },
+          "small_share": {
+            "type": "number",
+            "format": "double"
+          },
+          "small_value": {
+            "type": "number",
+            "format": "double"
+          },
+          "super_share": {
+            "type": "number",
+            "format": "double"
+          },
+          "super_value": {
+            "type": "number",
+            "format": "double"
+          },
+          "ticker": {
             "type": "string"
           }
         }

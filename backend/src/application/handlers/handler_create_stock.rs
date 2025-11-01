@@ -1,7 +1,8 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
+use tokio::time::sleep;
 
 use crate::{
     application::{
@@ -92,6 +93,8 @@ impl JobHandler for CreateStockHandler {
         };
 
         self.repo.create_stock(stock).await?;
+
+        sleep(Duration::from_secs(5)).await;
 
         // Step 2: crawl klines of the stock.
         let klines =

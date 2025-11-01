@@ -278,15 +278,13 @@ impl DomainRepository for SqliteDomainRepository {
         Ok(signals)
     }
 
-    async fn create_ml_sector(&self, flows: &[MoneyflowEastmoney]) -> Result<(), anyhow::Error> {
+    async fn create_mf_sector(&self, flows: &[MoneyflowEastmoney]) -> Result<(), anyhow::Error> {
         let tx = self.pool.begin().await?;
-
-        let now = chrono::Utc::now().to_string();
 
         for flow in flows.iter() {
             sqlx::query!(
                 "INSERT INTO moneyflow_sector (date_time, ticker, realname, lead_value, lead_share, super_value, super_share, large_value, large_share, mid_value, mid_share, small_value, small_share) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                now,
+                flow.date_time,
                 flow.ticker,
                 flow.realname,
                 flow.lead_value,
@@ -308,12 +306,20 @@ impl DomainRepository for SqliteDomainRepository {
         Ok(())
     }
 
-    async fn get_ml_sector(&self) -> Result<Vec<MoneyflowEastmoney>, anyhow::Error> {
+    async fn get_mf_sector(&self) -> Result<Vec<MoneyflowEastmoney>, anyhow::Error> {
         let flows = sqlx::query_as!(MoneyflowEastmoney, "SELECT * FROM moneyflow_sector")
             .fetch_all(&self.pool)
             .await?;
 
         Ok(flows)
+    }
+
+    async fn delete_mf_sector(&self) -> Result<(), anyhow::Error> {
+        sqlx::query!("DELETE FROM moneyflow_sector")
+            .execute(&self.pool)
+            .await?;
+
+        Ok(())
     }
 }
 
@@ -449,7 +455,7 @@ mod tests {
         }
 
         for mf in moneyflow_batch {
-            repo.create_ml_sector(&mf).await.unwrap();
+            repo.create_mf_sector(&mf).await.unwrap();
         }
 
         let (count,): (i64,) = sqlx::query_as("SELECT COUNT(*) from moneyflow_sector")
@@ -460,7 +466,7 @@ mod tests {
         assert_eq!(count, 1500);
 
         let test_ticker = "90.BK0420";
-        let records = repo.get_ml_sector().await.unwrap();
+        let records = repo.get_mf_sector().await.unwrap();
 
         assert_eq!(records.len(), 1500);
 
