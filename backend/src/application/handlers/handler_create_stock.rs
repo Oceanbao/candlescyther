@@ -97,19 +97,23 @@ impl JobHandler for CreateStockHandler {
         sleep(Duration::from_secs(5)).await;
 
         // Step 2: crawl klines of the stock.
-        let klines =
-            match crawl_kline_eastmoney(UrlKlineEastmoney::new(&payload.ticker, "0", "20500101"))
-                .await
-            {
-                Ok(klines) => klines,
-                Err(e) => {
-                    return Ok(JobResult {
-                        success: false,
-                        output: None,
-                        error: Some(e.to_string()),
-                    });
-                }
-            };
+        let klines = match crawl_kline_eastmoney(UrlKlineEastmoney::new(
+            &payload.ticker,
+            "0",
+            "20500101",
+            true,
+        ))
+        .await
+        {
+            Ok(klines) => klines,
+            Err(e) => {
+                return Ok(JobResult {
+                    success: false,
+                    output: None,
+                    error: Some(e.to_string()),
+                });
+            }
+        };
 
         self.repo.create_klines(&payload.ticker, &klines).await?;
 

@@ -8,7 +8,7 @@ use crate::application::model::{Job, JobError, JobResult, JobType};
 // create_klines and create_signals are UoW in create_stock.
 pub mod handler_create_klines;
 pub mod handler_create_ml_sector;
-pub mod handler_create_signals;
+pub mod handler_create_signals_sector;
 pub mod handler_create_stock;
 
 #[async_trait]

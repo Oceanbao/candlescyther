@@ -172,11 +172,11 @@ mod tests {
         application::{
             handlers::{
                 JobHandlerRegistry,
-                handler_create_klines::{CrawlPriceHandler, CrawlPricePayload},
-                handler_create_signals::{ComputeSignalHandler, ComputeSignalPayload},
+                handler_create_klines::CrawlPriceHandler,
+                handler_create_signals_sector::CreateSignalSectorHandler,
                 handler_create_stock::{CreateStockHandler, CreateStockPayload},
             },
-            model::{Job, JobStatus, JobType},
+            model::{Job, JobType},
             runner::JobRunner,
         },
         infra::storage::{
@@ -198,7 +198,7 @@ mod tests {
         let crawlprice_handler = CrawlPriceHandler {
             repo: repo_domain.clone(),
         };
-        let compute_signal_handler = ComputeSignalHandler {
+        let compute_signal_sector_handler = CreateSignalSectorHandler {
             repo: repo_domain.clone(),
         };
         let create_stock_handler = CreateStockHandler {
@@ -208,7 +208,7 @@ mod tests {
         let mut handler_registry = JobHandlerRegistry::new();
         handler_registry.register_handlers(vec![
             Arc::new(crawlprice_handler),
-            Arc::new(compute_signal_handler),
+            Arc::new(compute_signal_sector_handler),
             Arc::new(create_stock_handler),
         ]);
 
@@ -224,78 +224,6 @@ mod tests {
             wait_sec,
             batch_size,
         ))
-    }
-
-    #[tokio::test]
-    #[ignore = "network call to eastmoney"]
-    async fn test_jobs_compute_signal_with_crawl() {
-        let pool = setup_test_db().await.unwrap();
-        let runner = setup_runner(pool.clone()).await.unwrap();
-
-        let tickers = ["105.APP", "105.TSLA", "1.600635", "1.688981"];
-        let jobs: Vec<_> = tickers
-            .into_iter()
-            .map(|ticker| {
-                Job::new(
-                    JobType::CrawlPrice,
-                    json!(CrawlPricePayload {
-                        ticker: ticker.to_string(),
-                        start: "0".to_string(),
-                        end: "20500101".to_string(),
-                    }),
-                )
-            })
-            .collect();
-
-        runner.repo_job.create_jobs(jobs).await.unwrap();
-        runner.run().await.unwrap();
-
-        // Compute Signal Job
-        let jobs: Vec<_> = tickers
-            .into_iter()
-            .map(|ticker| {
-                Job::new(
-                    JobType::ComputeSignal,
-                    json!(ComputeSignalPayload {
-                        ticker: ticker.to_string(),
-                    }),
-                )
-            })
-            .collect();
-        runner.repo_job.create_jobs(jobs).await.unwrap();
-        runner.run().await.unwrap();
-
-        let query = r#"
-            SELECT * FROM jobs WHERE job_type = ?
-        "#;
-
-        let jobs = sqlx::query_as::<_, Job>(query)
-            .bind("computesignal")
-            .fetch_all(&pool)
-            .await;
-
-        assert!(jobs.is_ok());
-        let jobs = jobs.unwrap();
-        assert_eq!(jobs.len(), 4);
-
-        for job in jobs {
-            assert_eq!(job.job_type, JobType::ComputeSignal);
-            assert_eq!(job.job_status, JobStatus::Done);
-            assert_eq!(job.payload, json!({ "update signals table": "ok" }));
-            assert_eq!(job.error_message, None);
-        }
-
-        let (count,): (i64,) = sqlx::query_as("SELECT COUNT(*) from signals")
-            .fetch_one(&pool)
-            .await
-            .unwrap();
-        assert_eq!(count, 2);
-
-        let (count,): (i64,) = sqlx::query_as("SELECT COUNT(*) from signals_us")
-            .fetch_one(&pool)
-            .await
-            .unwrap();
-        assert_eq!(count, 2);
     }
 
     #[tokio::test]

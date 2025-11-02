@@ -43,6 +43,7 @@ impl JobHandler for CrawlPriceHandler {
             &payload.ticker,
             &payload.start,
             &payload.end,
+            true,
         ))
         .await
         {

@@ -10,13 +10,14 @@ pub struct UrlKlineEastmoney(String);
 
 // NOTE: this url is for weekly kline.
 impl UrlKlineEastmoney {
-    pub fn new(ticker: &str, start: &str, end: &str) -> Self {
+    pub fn new(ticker: &str, start: &str, end: &str, week: bool) -> Self {
+        let time_code = if week { 102 } else { 101 };
         let url = format!(
             "https://54.push2his.eastmoney.com/api/qt/stock/kline/get?cb=jQuery35106707668456928451_1695010059469&\
                 secid={}&ut=fa5fd1943c7b386f172d6893dbfba10b&fields1=f1%2Cf2%2Cf3%2Cf4%2Cf5%2Cf6&fields2=f51%2Cf52%2Cf53%2Cf54%2Cf55%2Cf56%2Cf57%2Cf58%2Cf59%2Cf60%2Cf61&\
-                klt=102&fqt=1&\
+                klt={}&fqt=1&\
                 beg={}&end={}&lmt=1200&_=1695010059524",
-            ticker, start, end,
+            ticker, time_code, start, end,
         );
         UrlKlineEastmoney(url)
     }
@@ -222,7 +223,7 @@ mod tests {
     #[ignore = "network call to eastmoney"]
     async fn test_crawl_kline_eastmoney() {
         // 105.TSLA 20110126 - 20110202 1D
-        let url = UrlKlineEastmoney::new("105.TSLA", "20110126", "20110401");
+        let url = UrlKlineEastmoney::new("105.TSLA", "20110126", "20110401", true);
 
         let result = crawl_kline_eastmoney(url).await;
 

@@ -50,6 +50,7 @@ pub enum JobType {
     CrawlPrice,
     ComputeSignal,
     CreateMfSector,
+    CreateSignalSector,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

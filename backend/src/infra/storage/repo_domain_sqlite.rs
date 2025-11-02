@@ -234,22 +234,6 @@ impl DomainRepository for SqliteDomainRepository {
         Ok(())
     }
 
-    async fn get_signals(&self, ticker: &str) -> Result<Signal, anyhow::Error> {
-        let signal = sqlx::query_as!(
-            Signal,
-            r#"
-            SELECT *
-            FROM signals
-            WHERE ticker = ?
-        "#,
-            ticker
-        )
-        .fetch_one(&self.pool)
-        .await?;
-
-        Ok(signal)
-    }
-
     async fn get_signals_all(&self) -> Result<Vec<Signal>, anyhow::Error> {
         let signals = sqlx::query_as!(
             Signal,
@@ -321,6 +305,54 @@ impl DomainRepository for SqliteDomainRepository {
 
         Ok(())
     }
+
+    async fn create_signals_sector(&self, signal: Signal) -> Result<(), anyhow::Error> {
+        sqlx::query!("DELETE FROM signals_sector WHERE ticker = ?", signal.ticker)
+            .execute(&self.pool)
+            .await?;
+
+        sqlx::query_as!(
+            Signal,
+            "INSERT INTO signals_sector (ticker, kdj_k, kdj_d, boll_dist) VALUES (?, ?, ?, ?)",
+            signal.ticker,
+            signal.kdj_k,
+            signal.kdj_d,
+            signal.boll_dist,
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    async fn get_signals_all_sector(&self) -> Result<Vec<Signal>, anyhow::Error> {
+        let signals = sqlx::query_as!(
+            Signal,
+            r#"
+            SELECT *
+            FROM signals_sector
+        "#
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(signals)
+    }
+
+    async fn get_sector_tickers(&self) -> Result<Vec<Stock>, anyhow::Error> {
+        let stock = sqlx::query_as!(
+            Stock,
+            r#"
+            SELECT *
+            FROM stocks
+            WHERE ticker LIKE '90.%'
+        "#,
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(stock)
+    }
 }
 
 fn is_us(ticker: &str) -> bool {
@@ -333,7 +365,7 @@ fn is_us(ticker: &str) -> bool {
 // FIX: more test coverage no need network call.
 #[cfg(test)]
 mod tests {
-    use chrono::{DateTime, Duration, Utc};
+    use chrono::{Duration, NaiveDate};
     use sqlx::{SqlitePool, sqlite::SqlitePoolOptions};
 
     use crate::{
@@ -447,7 +479,7 @@ mod tests {
         for day in 1..total {
             let mut mf_copy = moneyflow.clone();
             for x in mf_copy.iter_mut() {
-                let mut new_dt: DateTime<Utc> = x.date_time.parse().unwrap();
+                let mut new_dt = NaiveDate::parse_from_str(&x.date_time, "%Y-%m-%d").unwrap();
                 new_dt += Duration::days(day);
                 x.date_time = new_dt.to_string();
             }
@@ -463,18 +495,18 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(count, 1500);
+        assert_eq!(count, 930);
 
-        let test_ticker = "90.BK0420";
+        let ticker_excluded = "90.BK0420";
         let records = repo.get_mf_sector().await.unwrap();
 
-        assert_eq!(records.len(), 1500);
+        assert_eq!(records.len(), 930);
 
         let filtered: Vec<MoneyflowEastmoney> = records
             .into_iter()
-            .filter(|item| item.ticker == test_ticker)
+            .filter(|item| item.ticker == ticker_excluded)
             .collect();
 
-        assert_eq!(filtered.len(), 30);
+        assert_eq!(filtered.len(), 0);
     }
 }
