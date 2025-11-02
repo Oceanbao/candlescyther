@@ -215,6 +215,64 @@
         }
       }
     },
+    "/api/sector-signals": {
+      "get": {
+        "tags": [
+          "candlescyther"
+        ],
+        "summary": "List all sector signals.",
+        "description": "Returns all signals.",
+        "operationId": "list_sector_signals",
+        "responses": {
+          "200": {
+            "description": "List all signals from signals_sector table.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Signal"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Database error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "candlescyther"
+        ],
+        "summary": "Create signals for sectors.",
+        "description": "Returns ok.",
+        "operationId": "create_sector_signals",
+        "responses": {
+          "200": {
+            "description": "Update job is submitted."
+          },
+          "500": {
+            "description": "Database error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/signals": {
       "get": {
         "tags": [
@@ -405,14 +463,14 @@
         }
       }
     },
-    "/api/trigger/all": {
+    "/api/update/stocks": {
       "get": {
         "tags": [
           "candlescyther"
         ],
-        "summary": "Trigger update of all.",
-        "description": "Returns.",
-        "operationId": "update_all",
+        "summary": "Update all stocks.",
+        "description": "Returns ok.",
+        "operationId": "update_stocks",
         "parameters": [
           {
             "name": "code",
@@ -425,7 +483,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Trigger is init."
+            "description": "Update job is submitted."
           },
           "400": {
             "description": "Missing code",
@@ -580,7 +638,8 @@
           "DeleteStock",
           "CrawlPrice",
           "ComputeSignal",
-          "CreateMfSector"
+          "CreateMfSector",
+          "CreateSignalSector"
         ]
       },
       "Kline": {

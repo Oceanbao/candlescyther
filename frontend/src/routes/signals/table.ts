@@ -45,7 +45,7 @@ export const columns: ColumnDef<TSignals>[] = [
 		header: ({ column }) =>
 			renderComponent(DataTableSortButton, {
 				style: 'text-align: center; width: 100%; height: 100%;',
-				title: 'BOLL dist',
+				name: 'BOLL dist',
 				onclick: column.getToggleSortingHandler()
 			}),
 		cell: ({ row }) => {
@@ -88,7 +88,7 @@ export const columns: ColumnDef<TSignals>[] = [
 		header: ({ column }) =>
 			renderComponent(DataTableSortButton, {
 				style: 'text-align: center; width: 100%; height: 100%;',
-				title: 'D',
+				name: 'D',
 				onclick: column.getToggleSortingHandler()
 			}),
 		cell: ({ row }) => {

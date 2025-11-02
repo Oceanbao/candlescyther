@@ -92,6 +92,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sector-signals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List all sector signals.
+         * @description Returns all signals.
+         */
+        get: operations["list_sector_signals"];
+        put?: never;
+        /**
+         * Create signals for sectors.
+         * @description Returns ok.
+         */
+        post: operations["create_sector_signals"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/signals": {
         parameters: {
             query?: never;
@@ -157,7 +181,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/trigger/all": {
+    "/api/update/stocks": {
         parameters: {
             query?: never;
             header?: never;
@@ -165,10 +189,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Trigger update of all.
-         * @description Returns.
+         * Update all stocks.
+         * @description Returns ok.
          */
-        get: operations["update_all"];
+        get: operations["update_stocks"];
         put?: never;
         post?: never;
         delete?: never;
@@ -208,7 +232,7 @@ export interface components {
         /** @enum {string} */
         JobStatus: "Pending" | "Running" | "Done" | "Error";
         /** @enum {string} */
-        JobType: "CreateStock" | "DeleteStock" | "CrawlPrice" | "ComputeSignal" | "CreateMfSector";
+        JobType: "CreateStock" | "DeleteStock" | "CrawlPrice" | "ComputeSignal" | "CreateMfSector" | "CreateSignalSector";
         Kline: {
             /** Format: double */
             k_close: number;
@@ -481,6 +505,62 @@ export interface operations {
             };
         };
     };
+    list_sector_signals: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List all signals from signals_sector table. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Signal"][];
+                };
+            };
+            /** @description Database error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    create_sector_signals: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Update job is submitted. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Database error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
     list_signals: {
         parameters: {
             query?: never;
@@ -646,7 +726,7 @@ export interface operations {
             };
         };
     };
-    update_all: {
+    update_stocks: {
         parameters: {
             query: {
                 code: string;
@@ -657,7 +737,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Trigger is init. */
+            /** @description Update job is submitted. */
             200: {
                 headers: {
                     [name: string]: unknown;

@@ -38,8 +38,13 @@
 				icon: ListDetailsIcon
 			},
 			{
-				title: 'Signals',
+				title: 'Signals (A)',
 				url: '/signals',
+				icon: ChartBarIcon
+			},
+			{
+				title: 'Signals Sector',
+				url: '/signals-sector',
 				icon: ChartBarIcon
 			},
 			{

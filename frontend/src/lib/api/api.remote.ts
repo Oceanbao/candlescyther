@@ -91,3 +91,11 @@ export const getMfSector = query(async () => {
 		data: data ?? []
 	};
 });
+
+export const getSignalsSector = query(async () => {
+	let { data, error: apiError } = await server.GET('/api/sector-signals');
+
+	return {
+		data: data ?? []
+	};
+});

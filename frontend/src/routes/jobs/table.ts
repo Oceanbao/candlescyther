@@ -96,6 +96,7 @@ export const columns: ColumnDef<TJobs>[] = [
 		header: ({ column }) =>
 			renderComponent(DataTableSortButton, {
 				style: 'text-align: center; width: 100%; height: 100%;',
+				name: 'Created',
 				onclick: column.getToggleSortingHandler()
 			}),
 		cell: ({ row }) => {
