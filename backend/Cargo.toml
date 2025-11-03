@@ -31,6 +31,8 @@ tracing-subscriber = { version = "0.3", features = ['env-filter'] }
 dotenvy = "0.15"
 thiserror = "2"
 async-trait = "0.1.89"
+tokio-cron-scheduler = '0.15.1'
+chrono-tz = '0.10.4'
 
 [dev-dependencies]
 axum-test = "18.1.0"
