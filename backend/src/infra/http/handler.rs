@@ -14,14 +14,10 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::{
     application::{
-        handlers::{
-            handler_create_ml_sector::CreateMfSectorPayload,
-            handler_create_signals_sector::CreateSignalSectorPayload,
-            handler_create_stock::CreateStockPayload,
-        },
+        handlers::{create_mf_sector::CreateMfSectorPayload, create_stock::CreateStockPayload},
         model::{Job, JobType},
     },
-    domain::model::{Kline, Signal, Stock, User},
+    domain::model::{Signal, Stock, User},
     infra::{
         data::moneyflow::MoneyflowEastmoney,
         http::AppState,
@@ -51,18 +47,16 @@ pub fn create_routes_api(app_state: AppState) -> OpenApiRouter {
         .routes(routes!(list_jobs))
         // /signals
         .routes(routes!(list_signals))
-        // /signals-us
-        .routes(routes!(list_signals_us))
         // /stocks GET, POST, DELETE
         .routes(routes!(create_stocks, list_stocks, delete_stock))
         // /klines?ticker=a
-        .routes(routes!(list_klines))
+        // .routes(routes!(list_klines))
         // /update/stocks
-        .routes(routes!(update_stocks))
+        // .routes(routes!(update_stocks))
         // /mf/sector
-        .routes(routes!(create_mf_sector, list_mf_sector, delete_mf_sector))
+        .routes(routes!(create_mf_sector, list_mf_sector))
         // /sector-signals
-        .routes(routes!(create_sector_signals, list_sector_signals))
+        // .routes(routes!(create_sector_signals, list_sector_signals))
         .with_state(app_state)
 }
 
@@ -169,67 +163,121 @@ pub async fn list_logs(State(state): State<AppState>) -> impl IntoResponse {
     get,
     path = "/signals",
     tag = "candlescyther",
+    params(
+        SignalQuery
+    ),
     responses(
         (status = 200, description = "List all signals from signals table.", body = [Signal]),
+        (status = 400, description = "Missing query params", body = ApiError),
         (status = 500, description = "Database error", body = ApiError)
     )
 )]
-pub async fn list_signals(State(state): State<AppState>) -> impl IntoResponse {
-    match state.runner.repo_domain.get_signals_all().await {
-        Ok(signals) => (StatusCode::OK, Json(signals)).into_response(),
-        Err(e) => {
-            logit(
-                &state,
-                LogEntry::new(
-                    LogLevel::Error,
-                    format!("failed to query database {}", e),
-                    "http/handlers.rs",
-                    141,
-                ),
-            )
-            .await;
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiError::DatabaseError(e.to_string())),
-            )
-                .into_response()
-        }
+pub async fn list_signals(
+    State(state): State<AppState>,
+    query: Option<Query<SignalQuery>>,
+) -> impl IntoResponse {
+    if query.is_none() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiError::MissingInput("missing query param".to_string())),
+        )
+            .into_response();
+    }
+
+    let queries = query.unwrap();
+
+    // NOTE: logic is required.
+    // - `week` -> get signals from `signals_w` else `signals_d`
+    // - `sector` -> query on tickers for sectors only else stocks
+
+    match (queries.sector, queries.week) {
+        (true, true) => match state.runner.repo_domain.get_signals_sector_w().await {
+            Ok(signals) => return (StatusCode::OK, Json(signals)).into_response(),
+            Err(e) => {
+                logit(
+                    &state,
+                    LogEntry::new(
+                        LogLevel::Error,
+                        format!("db error: get_signals_sector_w: {}", e),
+                        "http/handlers.rs",
+                        203,
+                    ),
+                )
+                .await;
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(ApiError::DatabaseError(e.to_string())),
+                )
+                    .into_response();
+            }
+        },
+        (true, false) => match state.runner.repo_domain.get_signals_sector_d().await {
+            Ok(signals) => return (StatusCode::OK, Json(signals)).into_response(),
+            Err(e) => {
+                logit(
+                    &state,
+                    LogEntry::new(
+                        LogLevel::Error,
+                        format!("db error: get_signals_sector_d: {}", e),
+                        "http/handlers.rs",
+                        223,
+                    ),
+                )
+                .await;
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(ApiError::DatabaseError(e.to_string())),
+                )
+                    .into_response();
+            }
+        },
+        (false, true) => match state.runner.repo_domain.get_signals_stock_w().await {
+            Ok(signals) => return (StatusCode::OK, Json(signals)).into_response(),
+            Err(e) => {
+                logit(
+                    &state,
+                    LogEntry::new(
+                        LogLevel::Error,
+                        format!("db error: get_signals_stock_w: {}", e),
+                        "http/handlers.rs",
+                        243,
+                    ),
+                )
+                .await;
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(ApiError::DatabaseError(e.to_string())),
+                )
+                    .into_response();
+            }
+        },
+        (false, false) => match state.runner.repo_domain.get_signals_stock_d().await {
+            Ok(signals) => return (StatusCode::OK, Json(signals)).into_response(),
+            Err(e) => {
+                logit(
+                    &state,
+                    LogEntry::new(
+                        LogLevel::Error,
+                        format!("db error: get_signals_stock_d: {}", e),
+                        "http/handlers.rs",
+                        263,
+                    ),
+                )
+                .await;
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(ApiError::DatabaseError(e.to_string())),
+                )
+                    .into_response();
+            }
+        },
     }
 }
 
-/// List all signals for US stocks.
-///
-/// Returns all signals.
-#[utoipa::path(
-    get,
-    path = "/signals-us",
-    tag = "candlescyther",
-    responses(
-        (status = 200, description = "List all signals from signals table.", body = [Signal]),
-        (status = 500, description = "Database error", body = ApiError)
-    )
-)]
-pub async fn list_signals_us(State(state): State<AppState>) -> impl IntoResponse {
-    match state.runner.repo_domain.get_signals_all_us().await {
-        Ok(signals) => (StatusCode::OK, Json(signals)).into_response(),
-        Err(e) => {
-            logit(
-                &state,
-                LogEntry::new(
-                    LogLevel::Error,
-                    format!("failed to query database {}", e),
-                    "http/handlers.rs",
-                    141,
-                ),
-            )
-            .await;
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiError::DatabaseError(e.to_string())),
-            )
-                .into_response()
-        }
-    }
+#[derive(Deserialize, IntoParams)]
+pub struct SignalQuery {
+    pub sector: bool,
+    pub week: bool,
 }
 
 /// List all stocks.
@@ -306,7 +354,6 @@ pub async fn create_stocks(
             JobType::CreateStock,
             json!(CreateStockPayload {
                 ticker: ticker.to_string(),
-                update: false,
             }),
         ));
     }
@@ -422,66 +469,63 @@ pub struct DeleteStockQuery {
     ticker: String,
 }
 
-/// List all klines per ticker.
-///
-/// Returns all klines for give ticker.
-#[utoipa::path(
-    get,
-    path = "/klines",
-    tag = "candlescyther",
-    params(
-        KlineQuery,
-    ),
-    responses(
-        (status = 200, description = "List all klines for the ticker", body = [Kline]),
-        (status = 400, description = "Ticker is required", body = ApiError),
-        (status = 500, description = "Database error", body = ApiError)
-    )
-)]
-pub async fn list_klines(
-    State(state): State<AppState>,
-    query: Query<KlineQuery>,
-) -> impl IntoResponse {
-    if query.ticker.is_empty() {
-        return (
-            StatusCode::BAD_REQUEST,
-            Json(ApiError::MissingInput("missing param".to_string())),
-        )
-            .into_response();
-    }
+// #[utoipa::path(
+//     get,
+//     path = "/klines",
+//     tag = "candlescyther",
+//     params(
+//         KlineQuery,
+//     ),
+//     responses(
+//         (status = 200, description = "List all klines for the ticker", body = [Kline]),
+//         (status = 400, description = "Ticker is required", body = ApiError),
+//         (status = 500, description = "Database error", body = ApiError)
+//     )
+// )]
+// pub async fn list_klines(
+//     State(state): State<AppState>,
+//     query: Query<KlineQuery>,
+// ) -> impl IntoResponse {
+//     if query.ticker.is_empty() {
+//         return (
+//             StatusCode::BAD_REQUEST,
+//             Json(ApiError::MissingInput("missing param".to_string())),
+//         )
+//             .into_response();
+//     }
+//
+//     match sqlx::query_as::<sqlite::Sqlite, Kline>(
+//         "SELECT * FROM klines WHERE k_ticker = ? ORDER BY k_date ASC",
+//     )
+//     .bind(&query.ticker)
+//     .fetch_all(&state.db)
+//     .await
+//     {
+//         Ok(signals) => (StatusCode::OK, Json(signals)).into_response(),
+//         Err(e) => {
+//             logit(
+//                 &state,
+//                 LogEntry::new(
+//                     LogLevel::Error,
+//                     format!("failed to query database {}", e),
+//                     "http/handlers.rs",
+//                     141,
+//                 ),
+//             )
+//             .await;
+//             (
+//                 StatusCode::INTERNAL_SERVER_ERROR,
+//                 Json(ApiError::DatabaseError(e.to_string())),
+//             )
+//                 .into_response()
+//         }
+//     }
+// }
 
-    match sqlx::query_as::<sqlite::Sqlite, Kline>(
-        "SELECT * FROM klines WHERE k_ticker = ? ORDER BY k_date ASC",
-    )
-    .bind(&query.ticker)
-    .fetch_all(&state.db)
-    .await
-    {
-        Ok(signals) => (StatusCode::OK, Json(signals)).into_response(),
-        Err(e) => {
-            logit(
-                &state,
-                LogEntry::new(
-                    LogLevel::Error,
-                    format!("failed to query database {}", e),
-                    "http/handlers.rs",
-                    141,
-                ),
-            )
-            .await;
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiError::DatabaseError(e.to_string())),
-            )
-                .into_response()
-        }
-    }
-}
-
-#[derive(Deserialize, IntoParams)]
-pub struct KlineQuery {
-    pub ticker: String,
-}
+// #[derive(Deserialize, IntoParams)]
+// pub struct KlineQuery {
+//     pub ticker: String,
+// }
 
 /// Update all stocks.
 ///
@@ -529,7 +573,6 @@ pub async fn update_stocks(
             JobType::CreateStock,
             json!(CreateStockPayload {
                 ticker: ticker.to_string(),
-                update: true,
             }),
         ));
     }
@@ -661,142 +704,70 @@ pub async fn list_mf_sector(State(state): State<AppState>) -> impl IntoResponse 
     }
 }
 
-/// Delete moneyflow sector data.
-///
-/// Returns a 200 if the job is submitted.
-#[utoipa::path(
-    delete,
-    path = "/mf/sector",
-    tag = "candlescyther",
-    responses(
-        (status = 200, description = "Delete moneyflow sector records successfully"),
-        (status = 500, description = "Job runner error", body = ApiError),
-    )
-)]
-pub async fn delete_mf_sector(State(state): State<AppState>) -> impl IntoResponse {
-    match state.runner.repo_domain.delete_mf_sector().await {
-        Ok(_) => (StatusCode::OK).into_response(),
-        Err(e) => {
-            logit(
-                &state,
-                LogEntry::new(
-                    LogLevel::Error,
-                    format!("failed to query database {}", e),
-                    "http/handlers.rs",
-                    683,
-                ),
-            )
-            .await;
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiError::DatabaseError(e.to_string())),
-            )
-                .into_response()
-        }
-    }
-}
-
-/// Create signals for sectors.
-///
-/// Returns ok.
-#[utoipa::path(
-    post,
-    path = "/sector-signals",
-    tag = "candlescyther",
-    responses(
-        (status = 200, description = "Update job is submitted."),
-        (status = 500, description = "Database error", body = ApiError)
-    )
-)]
-pub async fn create_sector_signals(State(state): State<AppState>) -> impl IntoResponse {
-    let tickers: Vec<String> = match state.runner.repo_domain.get_sector_tickers().await {
-        Ok(stocks) => stocks.iter().map(|t| t.ticker.clone()).collect(),
-        Err(e) => {
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiError::DatabaseError(e.to_string())),
-            )
-                .into_response();
-        }
-    };
-
-    let mut jobs = vec![];
-    for ticker in &tickers {
-        jobs.push(Job::new(
-            JobType::CreateSignalSector,
-            json!(CreateSignalSectorPayload {
-                ticker: ticker.to_string(),
-            }),
-        ));
-    }
-
-    if let Err(e) = state.runner.repo_job.create_jobs(jobs).await {
-        logit(
-            &state,
-            LogEntry::new(
-                LogLevel::Error,
-                "failed to create_sector_signals",
-                "http/handlers.rs",
-                740,
-            ),
-        )
-        .await;
-        return (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiError::RunnerError(e.to_string())),
-        )
-            .into_response();
-    }
-
-    tokio::spawn(async move {
-        if let Err(e) = state.runner.run().await {
-            logit(
-                &state,
-                LogEntry::new(
-                    LogLevel::Error,
-                    format!("runner error: {}", e),
-                    "http/handlers.rs",
-                    759,
-                ),
-            )
-            .await;
-        }
-    });
-
-    (StatusCode::OK).into_response()
-}
-
-/// List all sector signals.
-///
-/// Returns all signals.
-#[utoipa::path(
-    get,
-    path = "/sector-signals",
-    tag = "candlescyther",
-    responses(
-        (status = 200, description = "List all signals from signals_sector table.", body = [Signal]),
-        (status = 500, description = "Database error", body = ApiError)
-    )
-)]
-pub async fn list_sector_signals(State(state): State<AppState>) -> impl IntoResponse {
-    match state.runner.repo_domain.get_signals_all_sector().await {
-        Ok(signals) => (StatusCode::OK, Json(signals)).into_response(),
-        Err(e) => {
-            logit(
-                &state,
-                LogEntry::new(
-                    LogLevel::Error,
-                    format!("failed to query database {}", e),
-                    "http/handlers.rs",
-                    791,
-                ),
-            )
-            .await;
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiError::DatabaseError(e.to_string())),
-            )
-                .into_response()
-        }
-    }
-}
+// #[utoipa::path(
+//     post,
+//     path = "/sector-signals",
+//     tag = "candlescyther",
+//     responses(
+//         (status = 200, description = "Update job is submitted."),
+//         (status = 500, description = "Database error", body = ApiError)
+//     )
+// )]
+// pub async fn create_sector_signals(State(state): State<AppState>) -> impl IntoResponse {
+//     let tickers: Vec<String> = match state.runner.repo_domain.get_sector_tickers().await {
+//         Ok(stocks) => stocks.iter().map(|t| t.ticker.clone()).collect(),
+//         Err(e) => {
+//             return (
+//                 StatusCode::INTERNAL_SERVER_ERROR,
+//                 Json(ApiError::DatabaseError(e.to_string())),
+//             )
+//                 .into_response();
+//         }
+//     };
+//
+//     let mut jobs = vec![];
+//     for ticker in &tickers {
+//         jobs.push(Job::new(
+//             JobType::CreateSignal,
+//             json!(CreateSignalPayload {
+//                 ticker: ticker.to_string(),
+//                 week: false
+//             }),
+//         ));
+//     }
+//
+//     if let Err(e) = state.runner.repo_job.create_jobs(jobs).await {
+//         logit(
+//             &state,
+//             LogEntry::new(
+//                 LogLevel::Error,
+//                 "failed to create_sector_signals",
+//                 "http/handlers.rs",
+//                 740,
+//             ),
+//         )
+//         .await;
+//         return (
+//             StatusCode::INTERNAL_SERVER_ERROR,
+//             Json(ApiError::RunnerError(e.to_string())),
+//         )
+//             .into_response();
+//     }
+//
+//     tokio::spawn(async move {
+//         if let Err(e) = state.runner.run().await {
+//             logit(
+//                 &state,
+//                 LogEntry::new(
+//                     LogLevel::Error,
+//                     format!("runner error: {}", e),
+//                     "http/handlers.rs",
+//                     759,
+//                 ),
+//             )
+//             .await;
+//         }
+//     });
+//
+//     (StatusCode::OK).into_response()
+// }

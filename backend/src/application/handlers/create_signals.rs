@@ -17,32 +17,33 @@ use crate::{
 };
 
 // ---------------------------------------------------------------
-// Create Signals Sector
-// - crawl all klines 1D for one sector (get from stocks table)
-// - compute signals from klines
-// - save signals to db
+// Create Signals
+// - Crawl klines
+// - Compute signals
+// - Save signals to db
 // ---------------------------------------------------------------
 #[derive(Clone)]
-pub struct CreateSignalSectorHandler {
+pub struct CreateSignalHandler {
     pub repo: Arc<dyn DomainRepository>,
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct CreateSignalSectorPayload {
+pub struct CreateSignalPayload {
     pub ticker: String,
+    pub week: bool,
 }
 
 #[async_trait]
-impl JobHandler for CreateSignalSectorHandler {
+impl JobHandler for CreateSignalHandler {
     fn job_type(&self) -> JobType {
-        JobType::CreateSignalSector
+        JobType::CreateSignal
     }
 
     async fn handle(&self, job: &Job) -> Result<JobResult, JobError> {
-        let payload: CreateSignalSectorPayload =
+        let payload: CreateSignalPayload =
             serde_json::from_value(job.payload.clone()).map_err(JobError::Serialization)?;
 
-        let url = UrlKlineEastmoney::new(&payload.ticker, "0", "20500101", false);
+        let url = UrlKlineEastmoney::new(&payload.ticker, "0", "20500101", payload.week);
 
         let klines = crawl_kline_eastmoney(url).await?;
 
@@ -56,11 +57,15 @@ impl JobHandler for CreateSignalSectorHandler {
             boll_dist,
         };
 
-        self.repo.create_signals_sector(signal).await?;
+        if payload.week {
+            self.repo.create_signals_w(signal).await?;
+        } else {
+            self.repo.create_signals_d(signal).await?;
+        }
 
         Ok(JobResult {
             success: true,
-            output: Some(serde_json::json!({"inserted signals_sector table": &payload.ticker})),
+            output: Some(serde_json::json!({"Created signals": &payload.ticker})),
             error: None,
         })
     }

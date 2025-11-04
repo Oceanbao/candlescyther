@@ -4,12 +4,10 @@ use std::sync::Arc;
 
 use crate::application::model::{Job, JobError, JobResult, JobType};
 
-// FIX: refine what is needed to create a JobHandler. Unique use case/Command.
-// create_klines and create_signals are UoW in create_stock.
-pub mod handler_create_klines;
-pub mod handler_create_ml_sector;
-pub mod handler_create_signals_sector;
-pub mod handler_create_stock;
+//pub mod create_klines;
+pub mod create_mf_sector;
+pub mod create_signals;
+pub mod create_stock;
 
 #[async_trait]
 pub trait JobHandler: Send + Sync {

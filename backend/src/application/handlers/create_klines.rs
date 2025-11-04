@@ -17,25 +17,25 @@ use crate::{
 // - (ticker, url) -> [Kline] and write db
 // ---------------------------------------------------------------
 #[derive(Clone)]
-pub struct CrawlPriceHandler {
+pub struct CreateKlineHandler {
     pub repo: Arc<dyn DomainRepository>,
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct CrawlPricePayload {
+pub struct CreateKlinePayload {
     pub ticker: String,
     pub start: String,
     pub end: String,
 }
 
 #[async_trait]
-impl JobHandler for CrawlPriceHandler {
+impl JobHandler for CreateKlineHandler {
     fn job_type(&self) -> JobType {
-        JobType::CrawlPrice
+        JobType::CreateKline
     }
 
     async fn handle(&self, job: &Job) -> Result<JobResult, JobError> {
-        let payload: CrawlPricePayload =
+        let payload: CreateKlinePayload =
             serde_json::from_value(job.payload.clone()).map_err(JobError::Serialization)?;
 
         // FIX: make port of data sourcing. i.e. data.crawl_kline()
@@ -66,7 +66,7 @@ impl JobHandler for CrawlPriceHandler {
                 })),
                 error: None,
             }),
-            Err(e) => Err(JobError::Other(e.to_string())),
+            Err(e) => Err(JobError::Unknown(e)),
         }
     }
 }

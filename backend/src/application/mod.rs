@@ -3,10 +3,8 @@ use std::sync::Arc;
 use crate::{
     application::{
         handlers::{
-            JobHandlerRegistry, handler_create_klines::CrawlPriceHandler,
-            handler_create_ml_sector::CreateMfSectorHandler,
-            handler_create_signals_sector::CreateSignalSectorHandler,
-            handler_create_stock::CreateStockHandler,
+            JobHandlerRegistry, create_mf_sector::CreateMfSectorHandler,
+            create_signals::CreateSignalHandler, create_stock::CreateStockHandler,
         },
         runner::JobRunner,
     },
@@ -24,10 +22,7 @@ pub fn init_runner(db: &Database) -> JobRunner {
     let repo_domain = Arc::new(SqliteDomainRepository::new(db.pool.clone()));
     let repo_job = Arc::new(SqliteJobRepository::new(db.pool.clone()));
 
-    let crawl_price_handler = CrawlPriceHandler {
-        repo: repo_domain.clone(),
-    };
-    let compute_signal_sector_handler = CreateSignalSectorHandler {
+    let create_signal_handler = CreateSignalHandler {
         repo: repo_domain.clone(),
     };
     let create_stock_handler = CreateStockHandler {
@@ -40,8 +35,7 @@ pub fn init_runner(db: &Database) -> JobRunner {
 
     let mut handler_registry = JobHandlerRegistry::new();
     handler_registry.register_handlers(vec![
-        Arc::new(crawl_price_handler),
-        Arc::new(compute_signal_sector_handler),
+        Arc::new(create_signal_handler),
         Arc::new(create_stock_handler),
         Arc::new(create_mf_sector_handler),
     ]);

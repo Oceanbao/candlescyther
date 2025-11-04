@@ -3,7 +3,7 @@ use sqlx::SqlitePool;
 
 use crate::{
     domain::{
-        model::{Kline, Signal, Stock},
+        model::{Signal, Stock},
         repository::DomainRepository,
     },
     infra::data::moneyflow::MoneyflowEastmoney,
@@ -78,25 +78,15 @@ impl DomainRepository for SqliteDomainRepository {
         let tx = self.pool.begin().await?;
 
         for ticker in tickers.iter() {
-            let is_us = is_us(ticker);
             sqlx::query!("DELETE FROM stocks WHERE ticker = ?", ticker)
                 .execute(&self.pool)
                 .await?;
-            if is_us {
-                sqlx::query!("DELETE FROM klines_us WHERE k_ticker = ?", ticker)
-                    .execute(&self.pool)
-                    .await?;
-                sqlx::query!("DELETE FROM signals_us WHERE ticker = ?", ticker)
-                    .execute(&self.pool)
-                    .await?;
-            } else {
-                sqlx::query!("DELETE FROM klines WHERE k_ticker = ?", ticker)
-                    .execute(&self.pool)
-                    .await?;
-                sqlx::query!("DELETE FROM signals WHERE ticker = ?", ticker)
-                    .execute(&self.pool)
-                    .await?;
-            }
+            sqlx::query!("DELETE FROM signals_d WHERE ticker = ?", ticker)
+                .execute(&self.pool)
+                .await?;
+            sqlx::query!("DELETE FROM signals_w WHERE ticker = ?", ticker)
+                .execute(&self.pool)
+                .await?;
         }
 
         tx.commit().await?;
@@ -105,141 +95,143 @@ impl DomainRepository for SqliteDomainRepository {
     }
 
     // NOTE: Restricted to a single ticker.
-    async fn create_klines(&self, ticker: &str, klines: &[Kline]) -> Result<(), anyhow::Error> {
-        let is_us = is_us(ticker);
+    //
+    // async fn create_klines(&self, ticker: &str, klines: &[Kline]) -> Result<(), anyhow::Error> {
+    //     let is_us = is_us(ticker);
+    //
+    //     // NOTE: Clear all records per tickers.
+    //     if is_us {
+    //         sqlx::query!("DELETE FROM klines_us WHERE k_ticker = ?", ticker)
+    //             .execute(&self.pool)
+    //             .await?;
+    //     } else {
+    //         sqlx::query!("DELETE FROM klines WHERE k_ticker = ?", ticker)
+    //             .execute(&self.pool)
+    //             .await?;
+    //     }
+    //
+    //     let batch_size = 5000;
+    //     let chunks: Vec<Vec<Kline>> = klines
+    //         .chunks(batch_size)
+    //         .map(|chunk| chunk.to_vec())
+    //         .collect();
+    //
+    //     for chunk in chunks {
+    //         let tx = self.pool.begin().await?;
+    //
+    //         // Batch commit.
+    //         if is_us {
+    //             for kline in chunk {
+    //                 sqlx::query!(
+    //             "INSERT INTO klines_us (k_ticker, k_date, k_open, k_high, k_low, k_close, k_volume, k_value)
+    //              VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+    //             kline.k_ticker,
+    //             kline.k_date,
+    //             kline.k_open,
+    //             kline.k_high,
+    //             kline.k_low,
+    //             kline.k_close,
+    //             kline.k_volume,
+    //             kline.k_value,
+    //         )
+    //         .execute(&self.pool)
+    //         .await?;
+    //             }
+    //         } else {
+    //             for kline in chunk {
+    //                 sqlx::query!(
+    //                     "INSERT INTO klines (k_ticker, k_date, k_open, k_high, k_low, k_close, k_volume, k_value) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+    //                     kline.k_ticker,
+    //                     kline.k_date,
+    //                     kline.k_open,
+    //                     kline.k_high,
+    //                     kline.k_low,
+    //                     kline.k_close,
+    //                     kline.k_volume,
+    //                     kline.k_value,
+    //                 )
+    //                     .execute(&self.pool)
+    //                 .await?;
+    //             }
+    //         }
+    //
+    //         tx.commit().await?;
+    //     }
+    //
+    //     Ok(())
+    // }
 
-        // NOTE: Clear all records per tickers.
-        if is_us {
-            sqlx::query!("DELETE FROM klines_us WHERE k_ticker = ?", ticker)
-                .execute(&self.pool)
-                .await?;
-        } else {
-            sqlx::query!("DELETE FROM klines WHERE k_ticker = ?", ticker)
-                .execute(&self.pool)
-                .await?;
-        }
+    // async fn get_klines(&self, ticker: &str) -> Result<Vec<Kline>, anyhow::Error> {
+    //     let is_us = is_us(ticker);
+    //
+    //     if is_us {
+    //         let klines = sqlx::query_as!(
+    //             Kline,
+    //             r#"
+    //         SELECT *
+    //         FROM klines_us
+    //         WHERE k_ticker = ?
+    //     "#,
+    //             ticker
+    //         )
+    //         .fetch_all(&self.pool)
+    //         .await?;
+    //
+    //         Ok(klines)
+    //     } else {
+    //         let klines = sqlx::query_as!(
+    //             Kline,
+    //             r#"
+    //         SELECT *
+    //         FROM klines
+    //         WHERE k_ticker = ?
+    //     "#,
+    //             ticker
+    //         )
+    //         .fetch_all(&self.pool)
+    //         .await?;
+    //
+    //         Ok(klines)
+    //     }
+    // }
 
-        let batch_size = 5000;
-        let chunks: Vec<Vec<Kline>> = klines
-            .chunks(batch_size)
-            .map(|chunk| chunk.to_vec())
-            .collect();
-
-        for chunk in chunks {
-            let tx = self.pool.begin().await?;
-
-            // Batch commit.
-            if is_us {
-                for kline in chunk {
-                    sqlx::query!(
-                "INSERT INTO klines_us (k_ticker, k_date, k_open, k_high, k_low, k_close, k_volume, k_value) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                kline.k_ticker,
-                kline.k_date,
-                kline.k_open,
-                kline.k_high,
-                kline.k_low,
-                kline.k_close,
-                kline.k_volume,
-                kline.k_value,
-            )
-            .execute(&self.pool)
-            .await?;
-                }
-            } else {
-                for kline in chunk {
-                    sqlx::query!(
-                        "INSERT INTO klines (k_ticker, k_date, k_open, k_high, k_low, k_close, k_volume, k_value) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                        kline.k_ticker,
-                        kline.k_date,
-                        kline.k_open,
-                        kline.k_high,
-                        kline.k_low,
-                        kline.k_close,
-                        kline.k_volume,
-                        kline.k_value,
-                    )
-                        .execute(&self.pool)
-                    .await?;
-                }
-            }
-
-            tx.commit().await?;
-        }
-
-        Ok(())
-    }
-
-    async fn get_klines(&self, ticker: &str) -> Result<Vec<Kline>, anyhow::Error> {
-        let is_us = is_us(ticker);
-
-        if is_us {
-            let klines = sqlx::query_as!(
-                Kline,
-                r#"
-            SELECT *
-            FROM klines_us
-            WHERE k_ticker = ?
-        "#,
-                ticker
-            )
-            .fetch_all(&self.pool)
-            .await?;
-
-            Ok(klines)
-        } else {
-            let klines = sqlx::query_as!(
-                Kline,
-                r#"
-            SELECT *
-            FROM klines
-            WHERE k_ticker = ?
-        "#,
-                ticker
-            )
-            .fetch_all(&self.pool)
-            .await?;
-
-            Ok(klines)
-        }
-    }
-
-    async fn create_signals(&self, signal: Signal) -> Result<(), anyhow::Error> {
-        let is_us = is_us(&signal.ticker);
-
-        if is_us {
-            sqlx::query_as!(
-                Signal,
-                "INSERT INTO signals_us (ticker, kdj_k, kdj_d, boll_dist) VALUES (?, ?, ?, ?)",
-                signal.ticker,
-                signal.kdj_k,
-                signal.kdj_d,
-                signal.boll_dist,
-            )
-            .execute(&self.pool)
-            .await?;
-        } else {
-            sqlx::query_as!(
-                Signal,
-                "INSERT INTO signals (ticker, kdj_k, kdj_d, boll_dist) VALUES (?, ?, ?, ?)",
-                signal.ticker,
-                signal.kdj_k,
-                signal.kdj_d,
-                signal.boll_dist,
-            )
-            .execute(&self.pool)
-            .await?;
-        }
+    async fn create_signals_d(&self, signal: Signal) -> Result<(), anyhow::Error> {
+        sqlx::query_as!(
+            Signal,
+            "INSERT INTO signals_d (ticker, kdj_k, kdj_d, boll_dist) VALUES (?, ?, ?, ?)",
+            signal.ticker,
+            signal.kdj_k,
+            signal.kdj_d,
+            signal.boll_dist,
+        )
+        .execute(&self.pool)
+        .await?;
 
         Ok(())
     }
 
-    async fn get_signals_all(&self) -> Result<Vec<Signal>, anyhow::Error> {
+    async fn create_signals_w(&self, signal: Signal) -> Result<(), anyhow::Error> {
+        sqlx::query_as!(
+            Signal,
+            "INSERT INTO signals_w (ticker, kdj_k, kdj_d, boll_dist) VALUES (?, ?, ?, ?)",
+            signal.ticker,
+            signal.kdj_k,
+            signal.kdj_d,
+            signal.boll_dist,
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    async fn get_signals_stock_d(&self) -> Result<Vec<Signal>, anyhow::Error> {
         let signals = sqlx::query_as!(
             Signal,
             r#"
             SELECT *
-            FROM signals
+            FROM signals_d
+            WHERE ticker NOT LIKE '90.%'
         "#
         )
         .fetch_all(&self.pool)
@@ -248,18 +240,65 @@ impl DomainRepository for SqliteDomainRepository {
         Ok(signals)
     }
 
-    async fn get_signals_all_us(&self) -> Result<Vec<Signal>, anyhow::Error> {
+    async fn get_signals_stock_w(&self) -> Result<Vec<Signal>, anyhow::Error> {
         let signals = sqlx::query_as!(
             Signal,
             r#"
             SELECT *
-            FROM signals_us
+            FROM signals_w
+            WHERE ticker NOT LIKE '90.%'
         "#
         )
         .fetch_all(&self.pool)
         .await?;
 
         Ok(signals)
+    }
+
+    async fn get_signals_sector_d(&self) -> Result<Vec<Signal>, anyhow::Error> {
+        let signals = sqlx::query_as!(
+            Signal,
+            r#"
+            SELECT *
+            FROM signals_d
+            WHERE ticker LIKE '90.%'
+        "#
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(signals)
+    }
+
+    async fn get_signals_sector_w(&self) -> Result<Vec<Signal>, anyhow::Error> {
+        let signals = sqlx::query_as!(
+            Signal,
+            r#"
+            SELECT *
+            FROM signals_w
+            WHERE ticker LIKE '90.%'
+        "#
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(signals)
+    }
+
+    async fn delete_signals_d(&self) -> Result<(), anyhow::Error> {
+        sqlx::query!("DELETE FROM signals_d")
+            .execute(&self.pool)
+            .await?;
+
+        Ok(())
+    }
+
+    async fn delete_signals_w(&self) -> Result<(), anyhow::Error> {
+        sqlx::query!("DELETE FROM signals_w")
+            .execute(&self.pool)
+            .await?;
+
+        Ok(())
     }
 
     async fn create_mf_sector(&self, flows: &[MoneyflowEastmoney]) -> Result<(), anyhow::Error> {
@@ -306,40 +345,7 @@ impl DomainRepository for SqliteDomainRepository {
         Ok(())
     }
 
-    async fn create_signals_sector(&self, signal: Signal) -> Result<(), anyhow::Error> {
-        sqlx::query!("DELETE FROM signals_sector WHERE ticker = ?", signal.ticker)
-            .execute(&self.pool)
-            .await?;
-
-        sqlx::query_as!(
-            Signal,
-            "INSERT INTO signals_sector (ticker, kdj_k, kdj_d, boll_dist) VALUES (?, ?, ?, ?)",
-            signal.ticker,
-            signal.kdj_k,
-            signal.kdj_d,
-            signal.boll_dist,
-        )
-        .execute(&self.pool)
-        .await?;
-
-        Ok(())
-    }
-
-    async fn get_signals_all_sector(&self) -> Result<Vec<Signal>, anyhow::Error> {
-        let signals = sqlx::query_as!(
-            Signal,
-            r#"
-            SELECT *
-            FROM signals_sector
-        "#
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        Ok(signals)
-    }
-
-    async fn get_sector_tickers(&self) -> Result<Vec<Stock>, anyhow::Error> {
+    async fn get_sector_tickers(&self) -> Result<Vec<String>, anyhow::Error> {
         let stock = sqlx::query_as!(
             Stock,
             r#"
@@ -351,16 +357,35 @@ impl DomainRepository for SqliteDomainRepository {
         .fetch_all(&self.pool)
         .await?;
 
-        Ok(stock)
+        let tickers = stock.iter().map(|x| x.ticker.clone()).collect();
+
+        Ok(tickers)
+    }
+
+    async fn get_stock_tickers(&self) -> Result<Vec<String>, anyhow::Error> {
+        let stock = sqlx::query_as!(
+            Stock,
+            r#"
+            SELECT *
+            FROM stocks
+            WHERE ticker NOT LIKE '90.%'
+        "#,
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let tickers = stock.iter().map(|x| x.ticker.clone()).collect();
+
+        Ok(tickers)
     }
 }
 
-fn is_us(ticker: &str) -> bool {
-    let idx = ticker.find('.').unwrap();
-    let num = &ticker[..idx];
-    let n = num.parse::<u32>().unwrap();
-    (100..=110).contains(&n)
-}
+// fn is_us(ticker: &str) -> bool {
+//     let idx = ticker.find('.').unwrap();
+//     let num = &ticker[..idx];
+//     let n = num.parse::<u32>().unwrap();
+//     (100..=110).contains(&n)
+// }
 
 // FIX: more test coverage no need network call.
 #[cfg(test)]
@@ -417,50 +442,50 @@ mod tests {
         klines
     }
 
-    #[tokio::test]
-    async fn test_create_klines() {
-        let pool = setup_test_db().await.unwrap();
-
-        let tickers = vec!["105.AAPL", "105.GOOGL", "105.MSFT"];
-        let mut klines: Vec<Vec<Kline>> = vec![];
-        for ticker in &tickers {
-            let kline = generate_sequential_klines(8000, ticker, 20200101);
-            klines.push(kline);
-        }
-
-        let repo = SqliteDomainRepository::new(pool.clone());
-
-        for (idx, ticker) in tickers.iter().enumerate() {
-            repo.create_klines(ticker, &klines[idx]).await.unwrap();
-        }
-
-        let (count,): (i64,) = sqlx::query_as("SELECT COUNT(*) from klines_us")
-            .fetch_one(&pool)
-            .await
-            .unwrap();
-
-        assert_eq!(count, 24000);
-
-        // Check for clearing function.
-        for (idx, ticker) in tickers.iter().enumerate() {
-            repo.create_klines(ticker, &klines[idx]).await.unwrap();
-        }
-
-        let (count,): (i64,) = sqlx::query_as("SELECT COUNT(*) from klines_us")
-            .fetch_one(&pool)
-            .await
-            .unwrap();
-
-        assert_eq!(count, 24000);
-
-        let klines_aapl = repo.get_klines("105.AAPL").await.unwrap();
-
-        assert_eq!(klines_aapl.len(), 8000);
-        assert_eq!(klines_aapl[0].k_ticker, "105.AAPL");
-        assert_eq!(klines_aapl[1].k_ticker, "105.AAPL");
-        assert_eq!(klines_aapl[0].k_date, 20200101);
-        assert_eq!(klines_aapl[1].k_date, 20200102);
-    }
+    // #[tokio::test]
+    // async fn test_create_klines() {
+    //     let pool = setup_test_db().await.unwrap();
+    //
+    //     let tickers = vec!["105.AAPL", "105.GOOGL", "105.MSFT"];
+    //     let mut klines: Vec<Vec<Kline>> = vec![];
+    //     for ticker in &tickers {
+    //         let kline = generate_sequential_klines(8000, ticker, 20200101);
+    //         klines.push(kline);
+    //     }
+    //
+    //     let repo = SqliteDomainRepository::new(pool.clone());
+    //
+    //     for (idx, ticker) in tickers.iter().enumerate() {
+    //         repo.create_klines(ticker, &klines[idx]).await.unwrap();
+    //     }
+    //
+    //     let (count,): (i64,) = sqlx::query_as("SELECT COUNT(*) from klines_us")
+    //         .fetch_one(&pool)
+    //         .await
+    //         .unwrap();
+    //
+    //     assert_eq!(count, 24000);
+    //
+    //     // Check for clearing function.
+    //     for (idx, ticker) in tickers.iter().enumerate() {
+    //         repo.create_klines(ticker, &klines[idx]).await.unwrap();
+    //     }
+    //
+    //     let (count,): (i64,) = sqlx::query_as("SELECT COUNT(*) from klines_us")
+    //         .fetch_one(&pool)
+    //         .await
+    //         .unwrap();
+    //
+    //     assert_eq!(count, 24000);
+    //
+    //     let klines_aapl = repo.get_klines("105.AAPL").await.unwrap();
+    //
+    //     assert_eq!(klines_aapl.len(), 8000);
+    //     assert_eq!(klines_aapl[0].k_ticker, "105.AAPL");
+    //     assert_eq!(klines_aapl[1].k_ticker, "105.AAPL");
+    //     assert_eq!(klines_aapl[0].k_date, 20200101);
+    //     assert_eq!(klines_aapl[1].k_date, 20200102);
+    // }
 
     #[tokio::test]
     async fn test_create_ml_sector() {

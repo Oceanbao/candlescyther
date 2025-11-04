@@ -15,7 +15,10 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
 
 FROM chef as builder
 
+ENV SQLX_OFFLINE=true
+
 WORKDIR /app
+
 COPY --from=planner /app/recipe.json recipe.json
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
   --mount=type=cache,target=$SCCACHE_DIR,sharing=locked \
@@ -44,7 +47,7 @@ COPY --from=builder /app/migrations migrations
 
 EXPOSE 8080
 
-ENV RUST_LOG=warn
+ENV RUST_LOG=debug
 
 # Run the app
 CMD ["./server"]

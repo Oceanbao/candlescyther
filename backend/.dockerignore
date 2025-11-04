@@ -1,5 +1,6 @@
 # Ignore local Rust build and test artifacts
 target/
+db/
 
 # Ignore development/version control files
 .git

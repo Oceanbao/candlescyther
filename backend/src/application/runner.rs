@@ -94,8 +94,8 @@ impl JobRunner {
                 handles.push(handle);
             }
 
-            // FIX: refine error management
             // Wait for all jobs in this batch to complete
+            // FIX: refine error management
             for handle in handles {
                 match handle.await {
                     Ok(a) => {
@@ -103,20 +103,28 @@ impl JobRunner {
                             match e {
                                 RunnerError::Execution { job_id, message } => {
                                     self.repo_job
-                                        .update_job_status(job_id, JobStatus::Error, Some(message))
+                                        .update_job_status(
+                                            job_id,
+                                            JobStatus::Error,
+                                            Some(message.clone()),
+                                        )
                                         .await?;
+                                    return Err(RunnerError::Execution { job_id, message });
                                 }
                                 RunnerError::Database(e) => {
                                     tracing::error!("{e}");
+                                    return Err(RunnerError::Database(e));
                                 }
                                 RunnerError::Unknown(e) => {
                                     tracing::error!("{e}");
+                                    return Err(RunnerError::Unknown(e));
                                 }
                             }
                         }
                     }
                     Err(join_err) => {
                         tracing::error!("Log this join handler error {join_err}");
+                        return Err(RunnerError::Unknown(join_err.into()));
                     }
                 }
             }
@@ -172,9 +180,8 @@ mod tests {
         application::{
             handlers::{
                 JobHandlerRegistry,
-                handler_create_klines::CrawlPriceHandler,
-                handler_create_signals_sector::CreateSignalSectorHandler,
-                handler_create_stock::{CreateStockHandler, CreateStockPayload},
+                create_signals::CreateSignalHandler,
+                create_stock::{CreateStockHandler, CreateStockPayload},
             },
             model::{Job, JobType},
             runner::JobRunner,
@@ -195,10 +202,7 @@ mod tests {
         let repo_domain = Arc::new(SqliteDomainRepository::new(pool.clone()));
         let repo_job = Arc::new(SqliteJobRepository::new(pool.clone()));
 
-        let crawlprice_handler = CrawlPriceHandler {
-            repo: repo_domain.clone(),
-        };
-        let compute_signal_sector_handler = CreateSignalSectorHandler {
+        let create_signal_handler = CreateSignalHandler {
             repo: repo_domain.clone(),
         };
         let create_stock_handler = CreateStockHandler {
@@ -207,8 +211,7 @@ mod tests {
 
         let mut handler_registry = JobHandlerRegistry::new();
         handler_registry.register_handlers(vec![
-            Arc::new(crawlprice_handler),
-            Arc::new(compute_signal_sector_handler),
+            Arc::new(create_signal_handler),
             Arc::new(create_stock_handler),
         ]);
 
@@ -240,7 +243,6 @@ mod tests {
                     JobType::CreateStock,
                     json!(CreateStockPayload {
                         ticker: ticker.to_string(),
-                        update: false,
                     }),
                 )
             })
@@ -249,19 +251,7 @@ mod tests {
         runner.repo_job.create_jobs(jobs).await.unwrap();
         runner.run().await.unwrap();
 
-        let signals = runner.repo_domain.get_signals_all().await.unwrap();
-        assert_eq!(signals.len(), 2);
-
-        let signals_us = runner.repo_domain.get_signals_all_us().await.unwrap();
-        assert_eq!(signals_us.len(), 2);
-
         let stocks = runner.repo_domain.get_stock_all().await.unwrap();
         assert_eq!(stocks.len(), tickers.len());
-
-        let klines = runner.repo_domain.get_klines("105.APP").await.unwrap();
-        assert!(klines.len() as i64 > 230);
-
-        let klines = runner.repo_domain.get_klines("1.600635").await.unwrap();
-        assert!(klines.len() as i64 > 230);
     }
 }

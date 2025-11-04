@@ -46,11 +46,9 @@ pub enum JobStatus {
 #[sqlx(rename_all = "lowercase")]
 pub enum JobType {
     CreateStock,
-    DeleteStock,
-    CrawlPrice,
-    ComputeSignal,
+    CreateKline,
+    CreateSignal,
     CreateMfSector,
-    CreateSignalSector,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -68,6 +66,4 @@ pub enum JobError {
     Database(#[from] sqlx::Error),
     #[error(transparent)]
     Unknown(#[from] anyhow::Error),
-    #[error("Job execution error: {0}")]
-    Other(String),
 }

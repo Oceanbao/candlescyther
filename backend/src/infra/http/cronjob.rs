@@ -3,10 +3,7 @@ use tokio_cron_scheduler::{JobBuilder, JobScheduler};
 
 use crate::{
     application::{
-        handlers::{
-            handler_create_ml_sector::CreateMfSectorPayload,
-            handler_create_signals_sector::CreateSignalSectorPayload,
-        },
+        handlers::{create_mf_sector::CreateMfSectorPayload, create_signals::CreateSignalPayload},
         model::{Job, JobType},
     },
     infra::{
@@ -26,14 +23,14 @@ pub async fn setup_cron_jobs(app_state: AppState) -> anyhow::Result<()> {
     let job2_state = app_state.clone();
 
     // ----------------------
-    // Job 1: Runs every weekday at 18:00 (6 PM)
+    // Job 1: Runs every weekday at 23:59 (11:59 PM)
     // ----------------------
     scheduler
         .add(
             JobBuilder::new()
                 .with_timezone(chrono_tz::Tz::Asia__Shanghai)
                 .with_cron_job_type()
-                .with_schedule("0 0 18 * * 1-5")
+                .with_schedule("0 59 23 * * 1-5")
                 .unwrap()
                 .with_run_async(Box::new(move |_uuid, _l| {
                     // Inner Clone: Necessary for every run, as `cron_create_mf_sector` consumes ownership.
@@ -50,14 +47,14 @@ pub async fn setup_cron_jobs(app_state: AppState) -> anyhow::Result<()> {
         .await?;
 
     // ----------------------
-    // Job 2: Runs every weekday at 19:00 (7 PM)
+    // Job 2: Runs every weekday at 16:00 (4 PM)
     // ----------------------
     scheduler
         .add(
             JobBuilder::new()
                 .with_timezone(chrono_tz::Tz::Asia__Shanghai)
                 .with_cron_job_type()
-                .with_schedule("0 0 19 * * 1-5")
+                .with_schedule("0 0 16 * * 1-5")
                 .unwrap()
                 .with_run_async(Box::new(move |_uuid, _l| {
                     // Inner Clone: Necessary for every run, as `cron_create_mf_sector` consumes ownership.
@@ -115,7 +112,7 @@ async fn cron_create_mf_sector(state: AppState) -> anyhow::Result<()> {
 
 async fn cron_create_signals_sector(state: AppState) -> anyhow::Result<()> {
     let tickers: Vec<String> = match state.runner.repo_domain.get_sector_tickers().await {
-        Ok(stocks) => stocks.iter().map(|t| t.ticker.clone()).collect(),
+        Ok(stocks) => stocks.iter().map(|t| t.clone()).collect(),
         Err(e) => {
             return Err(anyhow::anyhow!("{e}"));
         }
@@ -124,9 +121,10 @@ async fn cron_create_signals_sector(state: AppState) -> anyhow::Result<()> {
     let mut jobs = vec![];
     for ticker in &tickers {
         jobs.push(Job::new(
-            JobType::CreateSignalSector,
-            json!(CreateSignalSectorPayload {
+            JobType::CreateSignal,
+            json!(CreateSignalPayload {
                 ticker: ticker.to_string(),
+                week: false
             }),
         ));
     }
