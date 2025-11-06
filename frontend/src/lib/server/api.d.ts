@@ -18,27 +18,11 @@ export interface paths {
         get: operations["list_jobs"];
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/klines": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
         /**
-         * List all klines per ticker.
-         * @description Returns all klines for give ticker.
+         * Delete jobs by number.
+         * @description Returns all jobs.
          */
-        get: operations["list_klines"];
-        put?: never;
-        post?: never;
-        delete?: never;
+        delete: operations["delete_jobs"];
         options?: never;
         head?: never;
         patch?: never;
@@ -82,34 +66,6 @@ export interface paths {
          * @description Returns a 200 if the job is submitted.
          */
         post: operations["create_mf_sector"];
-        /**
-         * Delete moneyflow sector data.
-         * @description Returns a 200 if the job is submitted.
-         */
-        delete: operations["delete_mf_sector"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/sector-signals": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List all sector signals.
-         * @description Returns all signals.
-         */
-        get: operations["list_sector_signals"];
-        put?: never;
-        /**
-         * Create signals for sectors.
-         * @description Returns ok.
-         */
-        post: operations["create_sector_signals"];
         delete?: never;
         options?: never;
         head?: never;
@@ -128,26 +84,6 @@ export interface paths {
          * @description Returns all signals.
          */
         get: operations["list_signals"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/signals-us": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List all signals for US stocks.
-         * @description Returns all signals.
-         */
-        get: operations["list_signals_us"];
         put?: never;
         post?: never;
         delete?: never;
@@ -176,26 +112,6 @@ export interface paths {
         post: operations["create_stocks"];
         /** Delete stock. */
         delete: operations["delete_stock"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/update/stocks": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Update all stocks.
-         * @description Returns ok.
-         */
-        get: operations["update_stocks"];
-        put?: never;
-        post?: never;
-        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -232,24 +148,7 @@ export interface components {
         /** @enum {string} */
         JobStatus: "Pending" | "Running" | "Done" | "Error";
         /** @enum {string} */
-        JobType: "CreateStock" | "DeleteStock" | "CrawlPrice" | "ComputeSignal" | "CreateMfSector" | "CreateSignalSector";
-        Kline: {
-            /** Format: double */
-            k_close: number;
-            /** Format: int64 */
-            k_date: number;
-            /** Format: double */
-            k_high: number;
-            /** Format: double */
-            k_low: number;
-            /** Format: double */
-            k_open: number;
-            k_ticker: string;
-            /** Format: double */
-            k_value: number;
-            /** Format: double */
-            k_volume: number;
-        };
+        JobType: "CreateStock" | "CreateKline" | "CreateSignal" | "CreateMfSector";
         LogEntry: {
             /** Format: int64 */
             id: number;
@@ -353,10 +252,10 @@ export interface operations {
             };
         };
     };
-    list_klines: {
+    delete_jobs: {
         parameters: {
             query: {
-                ticker: string;
+                days: number;
             };
             header?: never;
             path?: never;
@@ -364,23 +263,12 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description List all klines for the ticker */
+            /** @description Delete jobs successful */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": components["schemas"]["Kline"][];
-                };
-            };
-            /** @description Ticker is required */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiError"];
-                };
+                content?: never;
             };
             /** @description Database error */
             500: {
@@ -478,92 +366,12 @@ export interface operations {
             };
         };
     };
-    delete_mf_sector: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Delete moneyflow sector records successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Job runner error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-        };
-    };
-    list_sector_signals: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description List all signals from signals_sector table. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Signal"][];
-                };
-            };
-            /** @description Database error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-        };
-    };
-    create_sector_signals: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Update job is submitted. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Database error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-        };
-    };
     list_signals: {
         parameters: {
-            query?: never;
+            query: {
+                sector: boolean;
+                week: boolean;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -579,33 +387,13 @@ export interface operations {
                     "application/json": components["schemas"]["Signal"][];
                 };
             };
-            /** @description Database error */
-            500: {
+            /** @description Missing query params */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["ApiError"];
-                };
-            };
-        };
-    };
-    list_signals_us: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description List all signals from signals table. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Signal"][];
                 };
             };
             /** @description Database error */
@@ -707,44 +495,6 @@ export interface operations {
                 content?: never;
             };
             /** @description Ticker is required */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description Database error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-        };
-    };
-    update_stocks: {
-        parameters: {
-            query: {
-                code: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Update job is submitted. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Missing code */
             400: {
                 headers: {
                     [name: string]: unknown;

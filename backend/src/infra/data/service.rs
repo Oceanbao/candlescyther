@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use ureq::Agent;
+use ureq::{Agent, Proxy};
 
 const USER_AGENTS: &[&str] = &[
     "Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; SLCC2; .NET CLR 2.0.50727; .NET CLR 3.5.30729; .NET CLR 3.0.30729; .NET4.0C; .NET4.0E; rv:11.0) like Gecko",
@@ -16,11 +16,51 @@ const USER_AGENTS: &[&str] = &[
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36 Trailer/93.3.8652.5",
 ];
 
+const PROXY_KEY: &str = "I2F7AR5G";
+const PROXY_PASS: &str = "FD11D74E91EE";
+
+const PROXY_URL: &str =
+    "https://share.proxy.qg.net/get?key=I2F7AR5G&num=3&area=&isp=0&format=json&distinct=true";
+
+const PROXY_SUCCESS: &str = "SUCCESS";
+
+#[derive(Deserialize)]
+struct ProxyBody {
+    pub code: String,
+    pub data: Vec<ProxyData>,
+}
+
+#[derive(Deserialize)]
+struct ProxyData {
+    pub server: String,
+}
+
 // url2text GET url and returns text results.
 pub async fn url2text(url: &str) -> Result<String, anyhow::Error> {
-    // let proxy = Proxy::new("http://121.43.150.231:3128")?;
-    // let agent: Agent = Agent::config_builder().proxy(Some(proxy)).build().into();
-    let agent: Agent = Agent::config_builder().build().into();
+    let proxy_body = ureq::get(PROXY_URL)
+        .call()?
+        .body_mut()
+        .read_json::<ProxyBody>()?;
+
+    if proxy_body.code != PROXY_SUCCESS {
+        return Err(anyhow::anyhow!(
+            "Proxy IP request failed: {}",
+            proxy_body.code
+        ));
+    }
+
+    if proxy_body.data.is_empty() {
+        return Err(anyhow::anyhow!(
+            "Proxy IP request success but no IP returned",
+        ));
+    }
+
+    let proxy_data = proxy_body.data.first().unwrap();
+    let proxy_server = format!("http://{}:{}@{}", PROXY_KEY, PROXY_PASS, proxy_data.server);
+    tracing::debug!("{}", proxy_server);
+
+    let proxy = Proxy::new(&proxy_server)?;
+    let agent: Agent = Agent::config_builder().proxy(Some(proxy)).build().into();
     let user_agent = choose_random(USER_AGENTS).unwrap();
 
     match agent.get(url).header("User-Agent", *user_agent).call() {

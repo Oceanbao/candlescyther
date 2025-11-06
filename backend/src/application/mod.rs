@@ -40,8 +40,8 @@ pub fn init_runner(db: &Database) -> JobRunner {
         Arc::new(create_mf_sector_handler),
     ]);
 
-    let concurrency = 1;
-    let wait_sec = 20;
+    let concurrency = 3;
+    let wait_sec = 3;
     let batch_size = concurrency;
 
     JobRunner::new(

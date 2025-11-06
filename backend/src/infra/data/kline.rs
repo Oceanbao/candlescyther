@@ -151,8 +151,8 @@ fn date_string_to_i32(date_str: &str) -> Result<i64, anyhow::Error> {
 #[cfg(test)]
 mod tests {
     use crate::infra::data::kline::{
-        RawPriceEastmoney, RawPriceEastmoneyData, UrlKlineEastmoney, crawl_kline_eastmoney,
-        create_kline_eastmoney, parse_kline_eastmoney, parse_raw_eastmoney,
+        RawPriceEastmoney, RawPriceEastmoneyData, create_kline_eastmoney, parse_kline_eastmoney,
+        parse_raw_eastmoney,
     };
 
     const DEMO_PRICE_EASTMONEY_GOOD: &str = r#"jQuery35105424247560587396_1758630789935({"rc":0,"rt":17,"svr":177617930,"lt":2,"full":0,"dlmkts":"","data":{"code":"APP","market":105,"name":"Applovin Corp-A","decimal":3,"dktotal":1125,"preKPrice":80.0,"klines":["2021-04-16,70.000,61.000,71.510,58.650,15643711,1034038718.000,16.08,-23.75,-19.000,4.37","2021-04-23,60.000,58.500,62.950,55.705,13380547,802760598.000,11.88,-4.10,-2.500,3.74","2021-04-30,58.770,58.010,61.110,57.650,2313034,136641797.000,5.91,-0.84,-0.490,0.65","2021-05-07,58.530,57.260,60.410,54.720,3922270,226305381.000,9.81,-1.29,-0.750,1.10","2021-05-14,59.210,57.260,59.210,49.410,7027414,375163594.000,17.11,0.00,0.000,1.93","2021-05-21,56.170,68.350,70.170,55.825,4603785,298832284.000,25.05,19.37,11.090,1.26"]}});"#;
@@ -219,37 +219,37 @@ mod tests {
         assert_eq!(first.k_date, 20210416);
     }
 
-    #[tokio::test]
-    #[ignore = "network call to eastmoney"]
-    async fn test_crawl_kline_eastmoney() {
-        // 105.TSLA 20110126 - 20110202 1D
-        let url = UrlKlineEastmoney::new("105.TSLA", "20110126", "20110401", true);
-
-        let result = crawl_kline_eastmoney(url).await;
-
-        assert!(result.is_ok());
-
-        let klines = result.unwrap();
-
-        let first = klines.first().unwrap();
-        let last = klines.last().unwrap();
-
-        assert_eq!(first.k_ticker, "105.TSLA");
-        assert_eq!(first.k_date, 20110128);
-        assert_eq!(first.k_open, 1.647);
-        assert_eq!(first.k_close, 1.601);
-        assert_eq!(first.k_high, 1.672);
-        assert_eq!(first.k_low, 1.583);
-        assert_eq!(first.k_volume, 3017209.0);
-        assert_eq!(first.k_value, 0.0);
-
-        assert_eq!(last.k_ticker, "105.TSLA");
-        assert_eq!(last.k_date, 20110401);
-        assert_eq!(last.k_open, 1.513);
-        assert_eq!(last.k_close, 1.777);
-        assert_eq!(last.k_high, 1.914);
-        assert_eq!(last.k_low, 1.503);
-        assert_eq!(last.k_volume, 17176406.0);
-        assert_eq!(last.k_value, 0.0);
-    }
+    // #[tokio::test]
+    // #[ignore = "network call to eastmoney"]
+    // async fn test_crawl_kline_eastmoney() {
+    //     // 105.TSLA 20110126 - 20110202 1D
+    //     let url = UrlKlineEastmoney::new("105.TSLA", "20110126", "20110401", true);
+    //
+    //     let result = crawl_kline_eastmoney(url).await;
+    //
+    //     assert!(result.is_ok());
+    //
+    //     let klines = result.unwrap();
+    //
+    //     let first = klines.first().unwrap();
+    //     let last = klines.last().unwrap();
+    //
+    //     assert_eq!(first.k_ticker, "105.TSLA");
+    //     assert_eq!(first.k_date, 20110128);
+    //     assert_eq!(first.k_open, 1.647);
+    //     assert_eq!(first.k_close, 1.601);
+    //     assert_eq!(first.k_high, 1.672);
+    //     assert_eq!(first.k_low, 1.583);
+    //     assert_eq!(first.k_volume, 3017209.0);
+    //     assert_eq!(first.k_value, 0.0);
+    //
+    //     assert_eq!(last.k_ticker, "105.TSLA");
+    //     assert_eq!(last.k_date, 20110401);
+    //     assert_eq!(last.k_open, 1.513);
+    //     assert_eq!(last.k_close, 1.777);
+    //     assert_eq!(last.k_high, 1.914);
+    //     assert_eq!(last.k_low, 1.503);
+    //     assert_eq!(last.k_volume, 17176406.0);
+    //     assert_eq!(last.k_value, 0.0);
+    // }
 }

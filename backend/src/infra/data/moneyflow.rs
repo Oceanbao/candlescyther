@@ -233,6 +233,7 @@ mod test {
     }
 
     #[tokio::test]
+    #[ignore = "network call to eastmoney"]
     async fn test_crawl_moneyflow_sector_eastmoney() {
         let url = UrlMoneyflowSectorEastmoney::default();
         let result = crawl_moneyflow_sector_eastmoney(url).await;

@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { getSignalsSector } from '$lib/api/api.remote';
+	import { getSignalStockDay } from '$lib/api/api.remote';
 	import DataTable from '$lib/components/data-table/data-table.svelte';
 	import { columns } from './table.js';
 	import Spinner from '$lib/components/ui/spinner/spinner.svelte';
 
-	let query = getSignalsSector();
+	let query = getSignalStockDay();
 </script>
 
 <div class="flex flex-1 flex-col">

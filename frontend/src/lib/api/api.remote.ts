@@ -22,27 +22,20 @@ import { z } from 'zod/v4';
   }
   }
  */
-export const getSignals = query(async () => {
-	let { data, error: apiError } = await server.GET('/api/signals');
 
-	return {
-		data: data ?? []
-	};
-});
-
-export const getSignalsUs = query(async () => {
-	let { data, error: apiError } = await server.GET('/api/signals-us');
-
-	return {
-		data: data ?? []
-	};
+export const createStocks = command(z.string(), async (tickers) => {
+	let res = await server.POST('/api/stocks', {
+		body: {
+			tickers
+		}
+	});
 });
 
 export const getStocks = query(async () => {
 	let { data, error: apiError } = await server.GET('/api/stocks');
 
 	return {
-		data: data ?? []
+		data
 	};
 });
 
@@ -56,7 +49,7 @@ export const deleteStock = command(z.string(), async (ticker) => {
 	});
 
 	return {
-		data: data ?? []
+		data
 	};
 });
 
@@ -64,7 +57,21 @@ export const getJobs = query(async () => {
 	let { data, error: apiError } = await server.GET('/api/jobs');
 
 	return {
-		data: data ?? []
+		data
+	};
+});
+
+export const deleteJobs = command(z.number(), async (days) => {
+	let { data, error: apiError } = await server.DELETE('/api/jobs', {
+		params: {
+			query: {
+				days
+			}
+		}
+	});
+
+	return {
+		data
 	};
 });
 
@@ -72,30 +79,74 @@ export const getLogs = query(async () => {
 	let { data, error: apiError } = await server.GET('/api/logs');
 
 	return {
-		data: data ?? []
+		data
 	};
-});
-
-export const createStocks = command(z.string(), async (tickers) => {
-	let res = await server.POST('/api/stocks', {
-		body: {
-			tickers
-		}
-	});
 });
 
 export const getMfSector = query(async () => {
 	let { data, error } = await server.GET('/api/mf/sector');
 
 	return {
-		data: data ?? []
+		data
 	};
 });
 
-export const getSignalsSector = query(async () => {
-	let { data, error: apiError } = await server.GET('/api/sector-signals');
+export const getSignalSectorDay = query(async () => {
+	let { data, error: apiError } = await server.GET('/api/signals', {
+		params: {
+			query: {
+				sector: true,
+				week: false
+			}
+		}
+	});
 
 	return {
-		data: data ?? []
+		data
+	};
+});
+
+export const getSignalSectorWeek = query(async () => {
+	let { data, error: apiError } = await server.GET('/api/signals', {
+		params: {
+			query: {
+				sector: true,
+				week: true
+			}
+		}
+	});
+
+	return {
+		data
+	};
+});
+
+export const getSignalStockWeek = query(async () => {
+	let { data, error: apiError } = await server.GET('/api/signals', {
+		params: {
+			query: {
+				sector: false,
+				week: true
+			}
+		}
+	});
+
+	return {
+		data
+	};
+});
+
+export const getSignalStockDay = query(async () => {
+	let { data, error: apiError } = await server.GET('/api/signals', {
+		params: {
+			query: {
+				sector: false,
+				week: true
+			}
+		}
+	});
+
+	return {
+		data
 	};
 });

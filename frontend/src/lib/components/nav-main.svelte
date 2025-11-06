@@ -1,4 +1,5 @@
 <script lang="ts">
+	import DotsIcon from '@tabler/icons-svelte/icons/dots';
 	import MailIcon from '@tabler/icons-svelte/icons/mail';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import { IconCircleCheck, type Icon } from '@tabler/icons-svelte';
@@ -183,6 +184,41 @@
 							{/if}
 							<span>{item.title}</span>
 						</Sidebar.MenuButton>
+						{#if item.title === 'Jobs'}
+							<DropdownMenu.Root>
+								<DropdownMenu.Trigger>
+									{#snippet child({ props })}
+										<Sidebar.MenuAction
+											{...props}
+											showOnHover
+											class="rounded-sm data-[state=open]:bg-accent"
+										>
+											<DotsIcon />
+											<span class="sr-only">More</span>
+										</Sidebar.MenuAction>
+									{/snippet}
+								</DropdownMenu.Trigger>
+								<DropdownMenu.Content
+									class="w-24 rounded-lg"
+									side={sidebar.isMobile ? 'bottom' : 'right'}
+									align={sidebar.isMobile ? 'end' : 'start'}
+								>
+									<DropdownMenu.Item>
+										<FolderIcon />
+										<span>Open</span>
+									</DropdownMenu.Item>
+									<DropdownMenu.Item>
+										<Share3Icon />
+										<span>Share</span>
+									</DropdownMenu.Item>
+									<DropdownMenu.Separator />
+									<DropdownMenu.Item variant="destructive" onclick={() => alert('haha')}>
+										<TrashIcon />
+										<span>Delete</span>
+									</DropdownMenu.Item>
+								</DropdownMenu.Content>
+							</DropdownMenu.Root>
+						{/if}
 					</Sidebar.MenuItem>
 				</a>
 			{/each}

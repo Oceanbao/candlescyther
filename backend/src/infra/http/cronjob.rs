@@ -112,7 +112,7 @@ async fn cron_create_mf_sector(state: AppState) -> anyhow::Result<()> {
 
 async fn cron_create_signals_sector(state: AppState) -> anyhow::Result<()> {
     let tickers: Vec<String> = match state.runner.repo_domain.get_sector_tickers().await {
-        Ok(stocks) => stocks.iter().map(|t| t.clone()).collect(),
+        Ok(stocks) => stocks,
         Err(e) => {
             return Err(anyhow::anyhow!("{e}"));
         }

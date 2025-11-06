@@ -394,7 +394,7 @@ mod tests {
     use sqlx::{SqlitePool, sqlite::SqlitePoolOptions};
 
     use crate::{
-        domain::{model::Kline, repository::DomainRepository},
+        domain::repository::DomainRepository,
         infra::{
             data::{
                 moneyflow::{MoneyflowEastmoney, RawMoneyflowEastmoney, create_moneyflow},
@@ -413,34 +413,34 @@ mod tests {
         Ok(pool)
     }
 
-    pub fn generate_sequential_klines(count: usize, ticker: &str, start_date: i64) -> Vec<Kline> {
-        let mut klines = Vec::with_capacity(count);
-
-        for i in 0..count {
-            let base_price = 100.0 + (i as f64 * 0.1); // Slowly increasing base price
-            let open = base_price;
-            let close = open - (i as f64 * 0.2);
-
-            let high = open.max(close);
-            let low = open.min(close);
-
-            let volume = 100000.0 + (i as f64 * 0.1);
-            let value = volume * (open + close) / 2.0;
-
-            klines.push(Kline {
-                k_ticker: ticker.to_string(),
-                k_date: start_date + i as i64,
-                k_open: open,
-                k_high: high,
-                k_low: low,
-                k_close: close,
-                k_volume: volume,
-                k_value: value,
-            });
-        }
-
-        klines
-    }
+    // pub fn generate_sequential_klines(count: usize, ticker: &str, start_date: i64) -> Vec<Kline> {
+    //     let mut klines = Vec::with_capacity(count);
+    //
+    //     for i in 0..count {
+    //         let base_price = 100.0 + (i as f64 * 0.1); // Slowly increasing base price
+    //         let open = base_price;
+    //         let close = open - (i as f64 * 0.2);
+    //
+    //         let high = open.max(close);
+    //         let low = open.min(close);
+    //
+    //         let volume = 100000.0 + (i as f64 * 0.1);
+    //         let value = volume * (open + close) / 2.0;
+    //
+    //         klines.push(Kline {
+    //             k_ticker: ticker.to_string(),
+    //             k_date: start_date + i as i64,
+    //             k_open: open,
+    //             k_high: high,
+    //             k_low: low,
+    //             k_close: close,
+    //             k_volume: volume,
+    //             k_value: value,
+    //         });
+    //     }
+    //
+    //     klines
+    // }
 
     // #[tokio::test]
     // async fn test_create_klines() {

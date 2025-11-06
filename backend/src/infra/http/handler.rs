@@ -6,7 +6,6 @@ use axum::{
 use hyper::StatusCode;
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::{Value, json};
-use sqlx::sqlite;
 
 use utoipa::{IntoParams, ToSchema};
 
@@ -44,7 +43,7 @@ pub fn create_routes_api(app_state: AppState) -> OpenApiRouter {
         // /logs
         .routes(routes!(list_logs))
         // /jobs
-        .routes(routes!(list_jobs))
+        .routes(routes!(list_jobs, delete_jobs))
         // /signals
         .routes(routes!(list_signals))
         // /stocks GET, POST, DELETE
@@ -118,6 +117,52 @@ pub async fn list_jobs(State(state): State<AppState>) -> impl IntoResponse {
     }
 }
 
+/// Delete jobs by number.
+///
+/// Returns all jobs.
+#[utoipa::path(
+    delete,
+    path = "/jobs",
+    tag = "candlescyther",
+    params(
+        DeleteJobsQuery,
+    ),
+    responses(
+        (status = 200, description = "Delete jobs successful"),
+        (status = 500, description = "Database error", body = ApiError)
+    )
+)]
+pub async fn delete_jobs(
+    State(state): State<AppState>,
+    Query(param): Query<DeleteJobsQuery>,
+) -> impl IntoResponse {
+    match state.runner.repo_job.delete_jobs(param.days).await {
+        Ok(()) => (StatusCode::OK).into_response(),
+        Err(e) => {
+            logit(
+                &state,
+                LogEntry::new(
+                    LogLevel::Error,
+                    format!("failed to query database list_jobs {}", e),
+                    "http/handlers.rs",
+                    80,
+                ),
+            )
+            .await;
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiError::DatabaseError(e.to_string())),
+            )
+                .into_response()
+        }
+    }
+}
+
+#[derive(Deserialize, IntoParams)]
+pub struct DeleteJobsQuery {
+    pub days: u32,
+}
+
 /// List all logs
 ///
 /// Default 100 records.
@@ -174,25 +219,15 @@ pub async fn list_logs(State(state): State<AppState>) -> impl IntoResponse {
 )]
 pub async fn list_signals(
     State(state): State<AppState>,
-    query: Option<Query<SignalQuery>>,
+    Query(params): Query<SignalQuery>,
 ) -> impl IntoResponse {
-    if query.is_none() {
-        return (
-            StatusCode::BAD_REQUEST,
-            Json(ApiError::MissingInput("missing query param".to_string())),
-        )
-            .into_response();
-    }
-
-    let queries = query.unwrap();
-
     // NOTE: logic is required.
     // - `week` -> get signals from `signals_w` else `signals_d`
     // - `sector` -> query on tickers for sectors only else stocks
 
-    match (queries.sector, queries.week) {
+    match (params.sector, params.week) {
         (true, true) => match state.runner.repo_domain.get_signals_sector_w().await {
-            Ok(signals) => return (StatusCode::OK, Json(signals)).into_response(),
+            Ok(signals) => (StatusCode::OK, Json(signals)).into_response(),
             Err(e) => {
                 logit(
                     &state,
@@ -204,15 +239,15 @@ pub async fn list_signals(
                     ),
                 )
                 .await;
-                return (
+                (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     Json(ApiError::DatabaseError(e.to_string())),
                 )
-                    .into_response();
+                    .into_response()
             }
         },
         (true, false) => match state.runner.repo_domain.get_signals_sector_d().await {
-            Ok(signals) => return (StatusCode::OK, Json(signals)).into_response(),
+            Ok(signals) => (StatusCode::OK, Json(signals)).into_response(),
             Err(e) => {
                 logit(
                     &state,
@@ -224,15 +259,15 @@ pub async fn list_signals(
                     ),
                 )
                 .await;
-                return (
+                (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     Json(ApiError::DatabaseError(e.to_string())),
                 )
-                    .into_response();
+                    .into_response()
             }
         },
         (false, true) => match state.runner.repo_domain.get_signals_stock_w().await {
-            Ok(signals) => return (StatusCode::OK, Json(signals)).into_response(),
+            Ok(signals) => (StatusCode::OK, Json(signals)).into_response(),
             Err(e) => {
                 logit(
                     &state,
@@ -244,15 +279,15 @@ pub async fn list_signals(
                     ),
                 )
                 .await;
-                return (
+                (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     Json(ApiError::DatabaseError(e.to_string())),
                 )
-                    .into_response();
+                    .into_response()
             }
         },
         (false, false) => match state.runner.repo_domain.get_signals_stock_d().await {
-            Ok(signals) => return (StatusCode::OK, Json(signals)).into_response(),
+            Ok(signals) => (StatusCode::OK, Json(signals)).into_response(),
             Err(e) => {
                 logit(
                     &state,
@@ -264,17 +299,17 @@ pub async fn list_signals(
                     ),
                 )
                 .await;
-                return (
+                (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     Json(ApiError::DatabaseError(e.to_string())),
                 )
-                    .into_response();
+                    .into_response()
             }
         },
     }
 }
 
-#[derive(Deserialize, IntoParams)]
+#[derive(Deserialize, IntoParams, Debug)]
 pub struct SignalQuery {
     pub sector: bool,
     pub week: bool,
@@ -382,9 +417,9 @@ pub async fn create_stocks(
                 &state,
                 LogEntry::new(
                     LogLevel::Error,
-                    format!("runner error: {}", e),
+                    format!("runner error: create_stocks: {}", e),
                     "http/handlers.rs",
-                    238,
+                    422,
                 ),
             )
             .await;
@@ -429,17 +464,9 @@ where
 )]
 pub async fn delete_stock(
     State(state): State<AppState>,
-    query: Query<DeleteStockQuery>,
+    Query(param): Query<DeleteStockQuery>,
 ) -> impl IntoResponse {
-    if query.ticker.is_empty() {
-        return (
-            StatusCode::BAD_REQUEST,
-            Json(ApiError::MissingInput("missing param".to_string())),
-        )
-            .into_response();
-    }
-
-    let tickers: Vec<&str> = query.ticker.split(',').map(|s| s.trim()).collect();
+    let tickers: Vec<&str> = param.ticker.split(',').map(|s| s.trim()).collect();
 
     // WARN: This is not async due to expecting small ops.
     match state.runner.repo_domain.delete_stocks(&tickers).await {
@@ -640,7 +667,7 @@ pub async fn create_mf_sector(State(state): State<AppState>) -> impl IntoRespons
                 LogLevel::Error,
                 "failed to create_jobs in create_mf_sector",
                 "http/handlers.rs",
-                596,
+                670,
             ),
         )
         .await;

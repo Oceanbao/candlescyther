@@ -33,18 +33,23 @@
 				icon: ListDetailsIcon
 			},
 			{
-				title: 'Signals (US)',
-				url: '/signals-us',
+				title: 'Signals Sector Week',
+				url: '/signals-sector-week',
 				icon: ListDetailsIcon
 			},
 			{
-				title: 'Signals (A)',
-				url: '/signals',
+				title: 'Signals Sector Day',
+				url: '/signals-sector-day',
 				icon: ChartBarIcon
 			},
 			{
-				title: 'Signals Sector',
-				url: '/signals-sector',
+				title: 'Signals Stock Week',
+				url: '/signals-stock-week',
+				icon: ChartBarIcon
+			},
+			{
+				title: 'Signals Stock Day',
+				url: '/signals-stock-day',
 				icon: ChartBarIcon
 			},
 			{

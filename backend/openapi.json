@@ -42,49 +42,29 @@
             }
           }
         }
-      }
-    },
-    "/api/klines": {
-      "get": {
+      },
+      "delete": {
         "tags": [
           "candlescyther"
         ],
-        "summary": "List all klines per ticker.",
-        "description": "Returns all klines for give ticker.",
-        "operationId": "list_klines",
+        "summary": "Delete jobs by number.",
+        "description": "Returns all jobs.",
+        "operationId": "delete_jobs",
         "parameters": [
           {
-            "name": "ticker",
+            "name": "days",
             "in": "query",
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "List all klines for the ticker",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Kline"
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Ticker is required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
+            "description": "Delete jobs successful"
           },
           "500": {
             "description": "Database error",
@@ -190,87 +170,6 @@
             }
           }
         }
-      },
-      "delete": {
-        "tags": [
-          "candlescyther"
-        ],
-        "summary": "Delete moneyflow sector data.",
-        "description": "Returns a 200 if the job is submitted.",
-        "operationId": "delete_mf_sector",
-        "responses": {
-          "200": {
-            "description": "Delete moneyflow sector records successfully"
-          },
-          "500": {
-            "description": "Job runner error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/sector-signals": {
-      "get": {
-        "tags": [
-          "candlescyther"
-        ],
-        "summary": "List all sector signals.",
-        "description": "Returns all signals.",
-        "operationId": "list_sector_signals",
-        "responses": {
-          "200": {
-            "description": "List all signals from signals_sector table.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Signal"
-                  }
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Database error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "candlescyther"
-        ],
-        "summary": "Create signals for sectors.",
-        "description": "Returns ok.",
-        "operationId": "create_sector_signals",
-        "responses": {
-          "200": {
-            "description": "Update job is submitted."
-          },
-          "500": {
-            "description": "Database error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          }
-        }
       }
     },
     "/api/signals": {
@@ -281,6 +180,24 @@
         "summary": "List all signals.",
         "description": "Returns all signals.",
         "operationId": "list_signals",
+        "parameters": [
+          {
+            "name": "sector",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "week",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "List all signals from signals table.",
@@ -295,37 +212,12 @@
               }
             }
           },
-          "500": {
-            "description": "Database error",
+          "400": {
+            "description": "Missing query params",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/signals-us": {
-      "get": {
-        "tags": [
-          "candlescyther"
-        ],
-        "summary": "List all signals for US stocks.",
-        "description": "Returns all signals.",
-        "operationId": "list_signals_us",
-        "responses": {
-          "200": {
-            "description": "List all signals from signals table.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Signal"
-                  }
                 }
               }
             }
@@ -442,51 +334,6 @@
           },
           "400": {
             "description": "Ticker is required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Database error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/update/stocks": {
-      "get": {
-        "tags": [
-          "candlescyther"
-        ],
-        "summary": "Update all stocks.",
-        "description": "Returns ok.",
-        "operationId": "update_stocks",
-        "parameters": [
-          {
-            "name": "code",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Update job is submitted."
-          },
-          "400": {
-            "description": "Missing code",
             "content": {
               "application/json": {
                 "schema": {
@@ -635,58 +482,10 @@
         "type": "string",
         "enum": [
           "CreateStock",
-          "DeleteStock",
-          "CrawlPrice",
-          "ComputeSignal",
-          "CreateMfSector",
-          "CreateSignalSector"
+          "CreateKline",
+          "CreateSignal",
+          "CreateMfSector"
         ]
-      },
-      "Kline": {
-        "type": "object",
-        "required": [
-          "k_ticker",
-          "k_date",
-          "k_open",
-          "k_high",
-          "k_low",
-          "k_close",
-          "k_volume",
-          "k_value"
-        ],
-        "properties": {
-          "k_close": {
-            "type": "number",
-            "format": "double"
-          },
-          "k_date": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "k_high": {
-            "type": "number",
-            "format": "double"
-          },
-          "k_low": {
-            "type": "number",
-            "format": "double"
-          },
-          "k_open": {
-            "type": "number",
-            "format": "double"
-          },
-          "k_ticker": {
-            "type": "string"
-          },
-          "k_value": {
-            "type": "number",
-            "format": "double"
-          },
-          "k_volume": {
-            "type": "number",
-            "format": "double"
-          }
-        }
       },
       "LogEntry": {
         "type": "object",
